@@ -2,7 +2,6 @@
  * A Babel plugin that iterates over code looking for instances where we're
  * creating a test renderer instance and wraps the contents with a palette <Theme>.
  *
- *
  *   To run:
  *   $ yarn codemod --dry --plugin ./scripts/update-tests-with-theme.js <filename>
  *
