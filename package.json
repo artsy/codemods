@@ -3,10 +3,14 @@
   "version": "0.0.1",
   "repository": "https://github.com/artsy/codemods.git",
   "license": "MIT",
+  "scripts": {
+    "prepare": "patch-package"
+  },
   "dependencies": {
     "@types/jscodeshift": "^0.6.1",
     "@types/node": "^12.6.8",
     "jscodeshift": "^0.6.4",
+    "patch-package": "^6.1.2",
     "prettier": "^1.18.2",
     "typescript": "^3.5.3"
   },
