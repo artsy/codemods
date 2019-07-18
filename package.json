@@ -1,0 +1,19 @@
+{
+  "name": "@artsy/codemods",
+  "version": "0.0.1",
+  "repository": "https://github.com/artsy/codemods.git",
+  "license": "MIT",
+  "dependencies": {
+    "@types/jscodeshift": "^0.6.1",
+    "@types/node": "^12.6.8",
+    "jscodeshift": "^0.6.4",
+    "prettier": "^1.18.2",
+    "typescript": "^3.5.3"
+  },
+  "prettier": {
+    "semi": false,
+    "singleQuote": false,
+    "trailingComma": "es5",
+    "bracketSpacing": true
+  }
+}
