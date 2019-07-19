@@ -23,6 +23,8 @@ import {
   TSTypeAnnotation,
   TSTypeReference,
   JSCodeshift,
+  BlockStatement,
+  ReturnStatement,
 } from "jscodeshift"
 
 const transform: Transform = (file, api, options) => {
@@ -172,13 +174,20 @@ function unpackThunk(thunk: Node, file: FileInfo) {
     if (ObjectExpression.check(body)) {
       return body
     } else {
-      throw new Error(
-        `Expected thunk function to only return an object (${errorLocation(
-          file,
-          body
-        )})`
-      )
+      if (BlockStatement.check(body)) {
+        const lastStatement = body.body[body.body.length - 1]
+        if (ReturnStatement.check(lastStatement)) {
+          const returnArg = lastStatement.argument
+          if (ObjectExpression.check(returnArg)) {
+            return returnArg
+          }
+        }
+      }
     }
+    console.log(
+      `Skipping fields of thunk function that does not return a simple ` +
+        `object (${errorLocation(file, body)})`
+    )
   } else if (Identifier.check(thunk)) {
     console.log(
       `Skipping fields declared as variable reference (${errorLocation(
@@ -186,13 +195,13 @@ function unpackThunk(thunk: Node, file: FileInfo) {
         thunk
       )})`
     )
-    return null
   } else {
-    throw new Error(
-      `Expected the \`fields\` key to hold either an object or an arrow ` +
+    console.log(
+      `Skipping fields that do not hold either an object or a trivial arrow ` +
         `function (${errorLocation(file, thunk)})`
     )
   }
+  return null
 }
 
 function camelize(input: string) {
