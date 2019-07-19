@@ -1,5 +1,11 @@
 /**
+ * First remove deprecated fields from the schema, as there will likely be some
+ * fields that were already renamed to `camelCase` and the `snake_case` was
+ * deprecated.
+ *
  * You will want to run the `remove-blank-lines-from-unstaged-changes` script after performing this codemod.
+ *
+ * jscodeshift --transform=/Users/eloy/Code/Artsy/codemods/src/update-graphql-field-case.ts --extensions=ts src/schema && /Users/eloy/Code/Artsy/codemods/scripts/remove-blank-lines-from-unstaged-changes && yarn prettier-project
  */
 
 import {
@@ -43,37 +49,45 @@ const transform: Transform = (file, api, options) => {
             } else if (key.name.includes("_")) {
               const oldName = key.name
               const newName = camelize(oldName)
-              prop.key = j.identifier(newName)
-              const fieldConfig = prop.value
-              if (ObjectExpression.check(fieldConfig)) {
-                const resolve = get(fieldConfig, "resolve")
-                if (!resolve) {
-                  const property = j.property.from({
-                    kind: "init",
-                    key: j.identifier(oldName),
-                    value: j.identifier(oldName),
-                    shorthand: true,
-                  })
-                  const resolveFunction = j.arrowFunctionExpression(
-                    [j.objectPattern([property])],
-                    j.identifier(oldName),
-                    true
-                  )
-                  fieldConfig.properties.push(
-                    j.objectProperty(j.identifier("resolve"), resolveFunction)
+              if (get(fields, newName)) {
+                console.log(
+                  `Skipping renaming \`${oldName}\` as another field by the ` +
+                    `name of \`${newName}\` already exists and is presumed ` +
+                    `to supersede it (${errorLocation(file, prop)})`
+                )
+              } else {
+                prop.key = j.identifier(newName)
+                const fieldConfig = prop.value
+                if (ObjectExpression.check(fieldConfig)) {
+                  const resolve = get(fieldConfig, "resolve")
+                  if (!resolve) {
+                    const property = j.property.from({
+                      kind: "init",
+                      key: j.identifier(oldName),
+                      value: j.identifier(oldName),
+                      shorthand: true,
+                    })
+                    const resolveFunction = j.arrowFunctionExpression(
+                      [j.objectPattern([property])],
+                      j.identifier(oldName),
+                      true
+                    )
+                    fieldConfig.properties.push(
+                      j.objectProperty(j.identifier("resolve"), resolveFunction)
+                    )
+                  }
+                } else if (CallExpression.check(fieldConfig)) {
+                  console.log(
+                    `Skipping addition of resolver for call expression \`${
+                      (fieldConfig.callee as Identifier).name
+                    }(…)\` (${errorLocation(file, fieldConfig)})`
                   )
                 }
-              } else if (CallExpression.check(fieldConfig)) {
-                console.log(
-                  `Skipping addition of resolver for call expression \`${
-                    (fieldConfig.callee as Identifier).name
-                  }(…)\` (${errorLocation(file, fieldConfig)})`
-                )
               }
             }
           } else if (SpreadElement.check(prop)) {
             console.log(
-              `Skip spread of \`${
+              `Skipping spread of \`${
                 (prop.argument as Identifier).name
               }\` (${errorLocation(file, prop)})`
             )
@@ -129,10 +143,8 @@ function unpackThunk(property: ObjectProperty, file: FileInfo) {
     }
   } else {
     throw new Error(
-      `Expected the \`fields\` key to hold either an object or an arrow function (${errorLocation(
-        file,
-        value
-      )})`
+      `Expected the \`fields\` key to hold either an object or an arrow ` +
+        `function (${errorLocation(file, value)})`
     )
   }
 }
