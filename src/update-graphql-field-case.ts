@@ -142,6 +142,14 @@ function camelize(input: string) {
     switch (c) {
       case "id":
         return "ID"
+      case "url":
+        return "URL"
+      case "usd":
+        return "USD"
+      case "utc":
+        return "UTC"
+      case "md":
+        return "MD"
       default:
         return c
     }
