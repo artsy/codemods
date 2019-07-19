@@ -1,3 +1,16 @@
+diff --git a/node_modules/@types/jscodeshift/src/Collection.d.ts b/node_modules/@types/jscodeshift/src/Collection.d.ts
+index 2cab87b..ad28b4a 100644
+--- a/node_modules/@types/jscodeshift/src/Collection.d.ts
++++ b/node_modules/@types/jscodeshift/src/Collection.d.ts
+@@ -64,7 +64,7 @@ export interface Collection<N>
+             i: number,
+             paths: Array<ASTPath<N>>
+         ) => ASTPath<T> | Array<ASTPath<T>> | null | undefined,
+-        type: recast.Type<any>
++        type?: recast.Type<any>
+     ): Collection<T>;
+ 
+     /** Returns the number of elements in this collection. */
 diff --git a/node_modules/@types/jscodeshift/src/collections/Node.d.ts b/node_modules/@types/jscodeshift/src/collections/Node.d.ts
 index d1e74f3..7eb7496 100644
 --- a/node_modules/@types/jscodeshift/src/collections/Node.d.ts
