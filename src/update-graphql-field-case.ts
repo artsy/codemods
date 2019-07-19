@@ -15,17 +15,52 @@ import {
   Identifier,
   NewExpression,
   ArrowFunctionExpression,
-  StringLiteral,
+  VariableDeclarator,
   SpreadElement,
   CallExpression,
   FileInfo,
   Node,
+  TSTypeAnnotation,
+  TSTypeReference,
+  JSCodeshift,
 } from "jscodeshift"
 
 const transform: Transform = (file, api, options) => {
   const j = api.jscodeshift
+  const collection = j(file.source)
 
-  return j(file.source)
+  collection
+    .find(VariableDeclarator, node => {
+      const typeAnnotation = (node.id as Identifier).typeAnnotation
+      if (TSTypeAnnotation.check(typeAnnotation)) {
+        const typeReference = typeAnnotation.typeAnnotation
+        if (TSTypeReference.check(typeReference)) {
+          const typeReferenceName = (typeReference.typeName as Identifier).name
+          if (typeReferenceName === "GraphQLFieldConfigMap") {
+            return true
+          } else if (typeReferenceName === "Thunk") {
+            const thunkTypeReference = typeReference.typeParameters!.params[0]
+            if (
+              TSTypeReference.check(thunkTypeReference) &&
+              (thunkTypeReference.typeName as Identifier).name ===
+                "GraphQLFieldConfigMap"
+            ) {
+              return true
+            } else {
+              throw new Error("Unexpected Thunk<…> type parameter.")
+            }
+          }
+        }
+      }
+      return false
+    })
+    .replaceWith(path => {
+      const node = path.node
+      processFields(path.node.init!, j, file)
+      return node
+    })
+
+  collection
     .find(NewExpression, node => {
       const callee = node.callee
       return (
@@ -38,68 +73,8 @@ const transform: Transform = (file, api, options) => {
       const node = path.node
       const config = node.arguments[0]
       if (ObjectExpression.check(config)) {
-        const fields = unpackThunk(get(config, "fields")!, file)
-        fields.properties.forEach(prop => {
-          if (ObjectProperty.check(prop)) {
-            const key = prop.key as Identifier
-            if (key.name === "__id") {
-              console.log(
-                `Skipping \`__id\` field (${errorLocation(file, prop)})`
-              )
-            } else if (key.name.includes("_")) {
-              const oldName = key.name
-              const newName = camelize(oldName)
-              if (get(fields, newName)) {
-                console.log(
-                  `Skipping renaming \`${oldName}\` as another field by the ` +
-                    `name of \`${newName}\` already exists and is presumed ` +
-                    `to supersede it (${errorLocation(file, prop)})`
-                )
-              } else {
-                prop.key = j.identifier(newName)
-                const fieldConfig = prop.value
-                if (ObjectExpression.check(fieldConfig)) {
-                  const resolve = get(fieldConfig, "resolve")
-                  if (!resolve) {
-                    const property = j.property.from({
-                      kind: "init",
-                      key: j.identifier(oldName),
-                      value: j.identifier(oldName),
-                      shorthand: true,
-                    })
-                    const resolveFunction = j.arrowFunctionExpression(
-                      [j.objectPattern([property])],
-                      j.identifier(oldName),
-                      true
-                    )
-                    fieldConfig.properties.push(
-                      j.objectProperty(j.identifier("resolve"), resolveFunction)
-                    )
-                  }
-                } else if (CallExpression.check(fieldConfig)) {
-                  console.log(
-                    `Skipping addition of resolver for call expression \`${
-                      (fieldConfig.callee as Identifier).name
-                    }(…)\` (${errorLocation(file, fieldConfig)})`
-                  )
-                }
-              }
-            }
-          } else if (SpreadElement.check(prop)) {
-            console.log(
-              `Skipping spread of \`${
-                (prop.argument as Identifier).name
-              }\` (${errorLocation(file, prop)})`
-            )
-          } else {
-            throw new Error(
-              `Unknown property type \`${prop.type}\` (${errorLocation(
-                file,
-                prop
-              )})`
-            )
-          }
-        })
+        const fieldsProp = get(config, "fields")!
+        processFields(fieldsProp.value, j, file)
       } else {
         throw new Error(
           `Expected a config object (${errorLocation(file, config)})`
@@ -107,7 +82,71 @@ const transform: Transform = (file, api, options) => {
       }
       return node
     })
-    .toSource()
+
+  return collection.toSource()
+}
+
+function processFields(fieldsThunk: Node, j: JSCodeshift, file: FileInfo) {
+  const fields = unpackThunk(fieldsThunk, file)
+  if (!fields) {
+    return
+  }
+  fields.properties.forEach(prop => {
+    if (ObjectProperty.check(prop)) {
+      const key = prop.key as Identifier
+      if (key.name === "__id") {
+        console.log(`Skipping \`__id\` field (${errorLocation(file, prop)})`)
+      } else if (key.name.includes("_")) {
+        const oldName = key.name
+        const newName = camelize(oldName)
+        if (get(fields, newName)) {
+          console.log(
+            `Skipping renaming \`${oldName}\` as another field by the ` +
+              `name of \`${newName}\` already exists and is presumed ` +
+              `to supersede it (${errorLocation(file, prop)})`
+          )
+        } else {
+          prop.key = j.identifier(newName)
+          const fieldConfig = prop.value
+          if (ObjectExpression.check(fieldConfig)) {
+            const resolve = get(fieldConfig, "resolve")
+            if (!resolve) {
+              const property = j.property.from({
+                kind: "init",
+                key: j.identifier(oldName),
+                value: j.identifier(oldName),
+                shorthand: true,
+              })
+              const resolveFunction = j.arrowFunctionExpression(
+                [j.objectPattern([property])],
+                j.identifier(oldName),
+                true
+              )
+              fieldConfig.properties.push(
+                j.objectProperty(j.identifier("resolve"), resolveFunction)
+              )
+            }
+          } else if (CallExpression.check(fieldConfig)) {
+            console.log(
+              `Skipping addition of resolver for call expression \`${
+                (fieldConfig.callee as Identifier).name
+              }(…)\` (${errorLocation(file, fieldConfig)})`
+            )
+          }
+        }
+      }
+    } else if (SpreadElement.check(prop)) {
+      console.log(
+        `Skipping spread of \`${
+          (prop.argument as Identifier).name
+        }\` (${errorLocation(file, prop)})`
+      )
+    } else {
+      throw new Error(
+        `Unknown property type \`${prop.type}\` (${errorLocation(file, prop)})`
+      )
+    }
+  })
 }
 
 function errorLocation(file: FileInfo, node: Node) {
@@ -125,12 +164,11 @@ function get(object: ObjectExpression, key: string) {
   return found as ObjectProperty | null
 }
 
-function unpackThunk(property: ObjectProperty, file: FileInfo) {
-  const value = property.value
-  if (ObjectExpression.check(value)) {
-    return value
-  } else if (ArrowFunctionExpression.check(value)) {
-    const body = value.body
+function unpackThunk(thunk: Node, file: FileInfo) {
+  if (ObjectExpression.check(thunk)) {
+    return thunk
+  } else if (ArrowFunctionExpression.check(thunk)) {
+    const body = thunk.body
     if (ObjectExpression.check(body)) {
       return body
     } else {
@@ -141,10 +179,18 @@ function unpackThunk(property: ObjectProperty, file: FileInfo) {
         )})`
       )
     }
+  } else if (Identifier.check(thunk)) {
+    console.log(
+      `Skipping fields declared as variable reference (${errorLocation(
+        file,
+        thunk
+      )})`
+    )
+    return null
   } else {
     throw new Error(
       `Expected the \`fields\` key to hold either an object or an arrow ` +
-        `function (${errorLocation(file, value)})`
+        `function (${errorLocation(file, thunk)})`
     )
   }
 }
