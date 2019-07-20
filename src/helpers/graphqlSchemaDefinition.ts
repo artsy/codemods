@@ -154,3 +154,17 @@ export function unpackThunk(thunk: Node, file: FileInfo) {
   }
   return null
 }
+
+export function getFieldConfig(prop: ObjectProperty, file: FileInfo) {
+  const fieldConfig = prop.value
+  if (ObjectExpression.check(fieldConfig)) {
+    return fieldConfig
+  } else if (CallExpression.check(fieldConfig)) {
+    console.log(
+      `Skipping addition of resolver for call expression \`${
+        (fieldConfig.callee as Identifier).name
+      }(…)\` (${errorLocation(file, fieldConfig)})`
+    )
+  }
+  return null
+}

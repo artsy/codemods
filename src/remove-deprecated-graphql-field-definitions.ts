@@ -17,7 +17,10 @@ import {
 
 import { errorLocation } from "./helpers/errorLocation"
 import { getProperty } from "./helpers/getProperty"
-import { forEachFieldConfigMapProperty } from "./helpers/graphqlSchemaDefinition"
+import {
+  forEachFieldConfigMapProperty,
+  getFieldConfig,
+} from "./helpers/graphqlSchemaDefinition"
 
 const transform: Transform = (file, api, _options) => {
   const j = api.jscodeshift
@@ -25,19 +28,13 @@ const transform: Transform = (file, api, _options) => {
     j(file.source),
     file,
     (prop, fieldMap) => {
-      const fieldConfig = prop.value
-      if (ObjectExpression.check(fieldConfig)) {
+      const fieldConfig = getFieldConfig(prop, file)
+      if (fieldConfig) {
         const deprecationReason = getProperty(fieldConfig, "deprecationReason")
         if (deprecationReason) {
           const index = fieldMap.properties.findIndex(p => p === prop)
           fieldMap.properties.splice(index, 1)
         }
-      } else if (CallExpression.check(fieldConfig)) {
-        console.log(
-          `Skipping deprecation check for field defined through call expression \`${
-            (fieldConfig.callee as Identifier).name
-          }(…)\` (${errorLocation(file, fieldConfig)})`
-        )
       }
     }
   ).toSource()
