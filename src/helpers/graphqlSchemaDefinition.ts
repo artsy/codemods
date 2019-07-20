@@ -21,12 +21,52 @@ import { Collection } from "jscodeshift/src/Collection"
 import { errorLocation } from "./errorLocation"
 import { getProperty } from "./getProperty"
 
+export function forEachFieldConfig(
+  collection: Collection<any>,
+  file: FileInfo,
+  callback: (
+    fieldConfig: ObjectExpression,
+    property: ObjectProperty | null,
+    fieldMap: ObjectExpression | null
+  ) => void
+) {
+  forEachFieldConfigMapProperty(collection, file, (prop, fieldMap) => {
+    const fieldConfig = getFieldConfig(prop, file)
+    if (fieldConfig) {
+      callback(fieldConfig, prop, fieldMap)
+    }
+  })
+
+  collection
+    .find(VariableDeclarator, node => {
+      const typeAnnotation = (node.id as Identifier).typeAnnotation
+      if (TSTypeAnnotation.check(typeAnnotation)) {
+        const typeReference = typeAnnotation.typeAnnotation
+        if (TSTypeReference.check(typeReference)) {
+          const typeReferenceName = (typeReference.typeName as Identifier).name
+          if (typeReferenceName === "GraphQLFieldConfig") {
+            return true
+          }
+        }
+      }
+      return false
+    })
+    .forEach(path => {
+      const fieldConfig = path.node.init!
+      if (ObjectExpression.check(fieldConfig)) {
+        callback(fieldConfig, null, null)
+      }
+    })
+
+  return collection
+}
+
 export function forEachFieldConfigMapProperty(
   collection: Collection<any>,
   file: FileInfo,
   callback: (property: ObjectProperty, fieldMap: ObjectExpression) => void
 ) {
-  return forEachFieldConfigMap(collection, file, thunk => {
+  forEachFieldConfigMap(collection, file, thunk => {
     const fieldMap = unpackThunk(thunk, file)
     if (fieldMap) {
       fieldMap.properties.forEach((prop, i) => {
@@ -49,6 +89,7 @@ export function forEachFieldConfigMapProperty(
       })
     }
   })
+  return collection
 }
 
 export function forEachFieldConfigMap(
@@ -89,7 +130,6 @@ export function forEachFieldConfigMap(
     .forEach(path => {
       const node = path.node
       callback(path.node.init!)
-      return node
     })
 
   collection
@@ -111,7 +151,6 @@ export function forEachFieldConfigMap(
           `Expected a config object (${errorLocation(file, config)})`
         )
       }
-      return node
     })
 
   return collection
@@ -159,9 +198,16 @@ export function getFieldConfig(prop: ObjectProperty, file: FileInfo) {
   const fieldConfig = prop.value
   if (ObjectExpression.check(fieldConfig)) {
     return fieldConfig
+  } else if (Identifier.check(fieldConfig)) {
+    console.log(
+      `Skipping field config by variable reference (${errorLocation(
+        file,
+        fieldConfig
+      )})`
+    )
   } else if (CallExpression.check(fieldConfig)) {
     console.log(
-      `Skipping addition of resolver for call expression \`${
+      `Skipping field config from function call \`${
         (fieldConfig.callee as Identifier).name
       }(…)\` (${errorLocation(file, fieldConfig)})`
     )
