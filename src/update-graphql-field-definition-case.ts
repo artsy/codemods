@@ -5,7 +5,7 @@
  *
  * You will want to run the `remove-blank-lines-from-unstaged-changes` script after performing this codemod.
  *
- * jscodeshift --transform=/Users/eloy/Code/Artsy/codemods/src/update-graphql-field-case.ts --extensions=ts src/schema && /Users/eloy/Code/Artsy/codemods/scripts/remove-blank-lines-from-unstaged-changes && yarn prettier-project
+ * jscodeshift --transform=/Users/eloy/Code/Artsy/codemods/src/update-graphql-field-definition-case.ts --extensions=ts src/schema && /Users/eloy/Code/Artsy/codemods/scripts/remove-blank-lines-from-unstaged-changes && yarn prettier-project
  */
 
 import {
