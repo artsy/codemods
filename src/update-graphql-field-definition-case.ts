@@ -21,50 +21,54 @@ import { forEachFieldConfigMapProperty } from "./helpers/graphqlSchemaDefinition
 
 const transform: Transform = (file, api, _options) => {
   const j = api.jscodeshift
-  return forEachFieldConfigMapProperty(j(file.source), file, (prop, fields) => {
-    const key = prop.key as Identifier
-    if (key.name === "__id") {
-      console.log(`Skipping \`__id\` field (${errorLocation(file, prop)})`)
-    } else if (key.name.includes("_")) {
-      const oldName = key.name
-      const newName = camelize(oldName)
-      if (getProperty(fields, newName)) {
-        console.log(
-          `Skipping renaming \`${oldName}\` as another field by the ` +
-            `name of \`${newName}\` already exists and is presumed ` +
-            `to supersede it (${errorLocation(file, prop)})`
-        )
-      } else {
-        prop.key = j.identifier(newName)
-        const fieldConfig = prop.value
-        if (ObjectExpression.check(fieldConfig)) {
-          const resolve = getProperty(fieldConfig, "resolve")
-          if (!resolve) {
-            const property = j.property.from({
-              kind: "init",
-              key: j.identifier(oldName),
-              value: j.identifier(oldName),
-              shorthand: true,
-            })
-            const resolveFunction = j.arrowFunctionExpression(
-              [j.objectPattern([property])],
-              j.identifier(oldName),
-              true
-            )
-            fieldConfig.properties.push(
-              j.objectProperty(j.identifier("resolve"), resolveFunction)
+  return forEachFieldConfigMapProperty(
+    j(file.source),
+    file,
+    (prop, fieldMap) => {
+      const key = prop.key as Identifier
+      if (key.name === "__id") {
+        console.log(`Skipping \`__id\` field (${errorLocation(file, prop)})`)
+      } else if (key.name.includes("_")) {
+        const oldName = key.name
+        const newName = camelize(oldName)
+        if (getProperty(fieldMap, newName)) {
+          console.log(
+            `Skipping renaming \`${oldName}\` as another field by the ` +
+              `name of \`${newName}\` already exists and is presumed ` +
+              `to supersede it (${errorLocation(file, prop)})`
+          )
+        } else {
+          prop.key = j.identifier(newName)
+          const fieldConfig = prop.value
+          if (ObjectExpression.check(fieldConfig)) {
+            const resolve = getProperty(fieldConfig, "resolve")
+            if (!resolve) {
+              const property = j.property.from({
+                kind: "init",
+                key: j.identifier(oldName),
+                value: j.identifier(oldName),
+                shorthand: true,
+              })
+              const resolveFunction = j.arrowFunctionExpression(
+                [j.objectPattern([property])],
+                j.identifier(oldName),
+                true
+              )
+              fieldConfig.properties.push(
+                j.objectProperty(j.identifier("resolve"), resolveFunction)
+              )
+            }
+          } else if (CallExpression.check(fieldConfig)) {
+            console.log(
+              `Skipping addition of resolver for call expression \`${
+                (fieldConfig.callee as Identifier).name
+              }(…)\` (${errorLocation(file, fieldConfig)})`
             )
           }
-        } else if (CallExpression.check(fieldConfig)) {
-          console.log(
-            `Skipping addition of resolver for call expression \`${
-              (fieldConfig.callee as Identifier).name
-            }(…)\` (${errorLocation(file, fieldConfig)})`
-          )
         }
       }
     }
-  }).toSource()
+  ).toSource()
 }
 
 function camelize(input: string) {

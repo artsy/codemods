@@ -24,14 +24,14 @@ import { getProperty } from "./getProperty"
 export function forEachFieldConfigMapProperty(
   collection: Collection<any>,
   file: FileInfo,
-  callback: (property: ObjectProperty, configMap: ObjectExpression) => void
+  callback: (property: ObjectProperty, fieldMap: ObjectExpression) => void
 ) {
   return forEachFieldConfigMap(collection, file, thunk => {
-    const fields = unpackThunk(thunk, file)
-    if (fields) {
-      fields.properties.forEach(prop => {
+    const fieldMap = unpackThunk(thunk, file)
+    if (fieldMap) {
+      fieldMap.properties.forEach((prop, i) => {
         if (ObjectProperty.check(prop)) {
-          callback(prop, fields)
+          callback(prop, fieldMap)
         } else if (SpreadElement.check(prop)) {
           console.log(
             `Skipping spread of \`${
