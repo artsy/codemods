@@ -74,13 +74,13 @@ export const TypeWithoutThunk = new GraphQLObjectType<any, any>({
       resolve: (
         _source,
         {
-          artworkID: _artwork_id,
+          artworkID,
           ..._options
         },
         { artworkLoader }
       ) => {
         const options = {
-          artwork_id: _artwork_id,
+          artwork_id: artworkID,
           ..._options
         };
 

@@ -137,10 +137,10 @@ const transform: Transform = (file, api, _options) => {
                         paramProp.key = j.identifier(newName)
                         paramProp.value = j.identifier(oldName)
                       } else {
-                      /**
-                       * In the case of { oldName: otherName } we rename to
-                       * { newName: otherName }.
-                       */
+                        /**
+                         * In the case of { oldName: otherName } we rename to
+                         * { newName: otherName }.
+                         */
                         paramProp.key = j.identifier(newName)
                       }
                       /**
@@ -170,23 +170,25 @@ const transform: Transform = (file, api, _options) => {
                  * Replace `(source, options, …) => { … }` with:
                  *
                  * ```
-                 * (source, { newName: _oldName }, …) => {
-                 *   const options = { oldName: _oldName }
+                 * (source, { newName }, …) => {
+                 *   const options = { oldName: newName }
                  *   …
                  * }
                  * ```
                  */
                 Object.keys(renamedArgs).forEach(oldName => {
+                  const newName = camelize(oldName)
                   paramProperties.push(
-                    j.objectProperty(
-                      j.identifier(camelize(oldName)),
-                      j.identifier(intermediateName(oldName))
-                    )
+                    j.objectProperty.from({
+                      shorthand: true,
+                      key: j.identifier(newName),
+                      value: j.identifier(newName),
+                    })
                   )
                   newParamProperties.push(
                     j.objectProperty(
                       j.identifier(oldName),
-                      j.identifier(intermediateName(oldName))
+                      j.identifier(newName)
                     )
                   )
                 })
@@ -194,8 +196,8 @@ const transform: Transform = (file, api, _options) => {
                  * Or if not all args were renamed:
                  *
                  * ```
-                 * (source, { newName: _oldName, ..._options }, …) => {
-                 *   const options = { oldName: _oldName, ..._options }
+                 * (source, { newName, ..._options }, …) => {
+                 *   const options = { oldName: newName, ..._options }
                  *   …
                  * }
                  * ```
@@ -218,7 +220,7 @@ const transform: Transform = (file, api, _options) => {
                  *
                  * ```
                  * (…) => {
-                 *   const options = { oldName: _oldName }
+                 *   const options = { oldName: newName }
                  *   …
                  * }
                  * ```
