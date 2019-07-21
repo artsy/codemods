@@ -107,7 +107,7 @@ const transform: Transform = (file, api, _options) => {
                 )
               } else {
                 argProp.key = j.identifier(newName)
-                renamedArgs[newName] = oldName
+                renamedArgs[oldName] = newName
               }
             }
           }
@@ -123,31 +123,31 @@ const transform: Transform = (file, api, _options) => {
                 let restProperty: RestProperty | null = null
                 argsParam.properties.forEach(paramProp => {
                   if (ObjectProperty.check(paramProp)) {
-                    const newName = (paramProp.key as Identifier).name
-                    const oldName = renamedArgs[newName]
-                    if (oldName) {
+                    const oldName = (paramProp.key as Identifier).name
+                    const newName = renamedArgs[oldName]
+                    if (newName) {
                       /**
                        * Rename { oldName } or { oldName: oldName } to
-                       * { oldName: newName } so that we don’t need to
+                       * { newName: oldName } so that we don’t need to
                        * make any further changes to the body, which is
                        * safest.
-                       *
-                       * In the case of { oldName: otherName } we do
-                       * nothing.
                        */
-                      if (
-                        paramProp &&
-                        (paramProp.value as Identifier).name === oldName
-                      ) {
+                      if ((paramProp.value as Identifier).name === oldName) {
                         paramProp.shorthand = false
                         paramProp.key = j.identifier(newName)
                         paramProp.value = j.identifier(oldName)
+                      } else {
+                      /**
+                       * In the case of { oldName: otherName } we rename to
+                       * { newName: otherName }.
+                       */
+                        paramProp.key = j.identifier(newName)
                       }
                       /**
                        * Keep track of wether we've seen all renamed args so we
                        * can decide if we need to visit a rest property.
                        */
-                      delete renamedArgs[newName]
+                      delete renamedArgs[oldName]
                     }
                   } else if (RestProperty.check(paramProp)) {
                     restProperty = paramProp
@@ -176,8 +176,7 @@ const transform: Transform = (file, api, _options) => {
                  * }
                  * ```
                  */
-                Object.keys(renamedArgs).forEach(newName => {
-                  const oldName = renamedArgs[newName]
+                Object.keys(renamedArgs).forEach(oldName => {
                   paramProperties.push(
                     j.objectProperty(
                       j.identifier(camelize(oldName)),
