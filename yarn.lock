@@ -904,7 +904,14 @@
   dependencies:
     "@babel/types" "^7.3.0"
 
-"@types/graphql@^14.2.2":
+"@types/graphql-relay@^0.4.9":
+  version "0.4.9"
+  resolved "https://registry.yarnpkg.com/@types/graphql-relay/-/graphql-relay-0.4.9.tgz#0f34ee87a1bf1fc4c986eeefe0707318c7433212"
+  integrity sha512-SL0UXsnNozTBIXwSs0pGB1iTWKaQzxmfqBwx9m0NvDGg463sYaFw4f7rizTzL4OSaVobLkvGJWUPesbg66MfHw==
+  dependencies:
+    "@types/graphql" "*"
+
+"@types/graphql@*", "@types/graphql@^14.2.2":
   version "14.2.2"
   resolved "https://registry.yarnpkg.com/@types/graphql/-/graphql-14.2.2.tgz#10f197e6f8559c11b16d630c5e9c10c3c8e61c5e"
   integrity sha512-okXbUmdZFMO3AYBEJCcpJFPFDkKmIiZZBqWD5TmPtAv+GHfjD2qLZEI0PvZ8IWMU4ozoK2HV2lDxWjw4LbVlnw==

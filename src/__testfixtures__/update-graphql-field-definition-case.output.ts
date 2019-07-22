@@ -4,7 +4,11 @@ import {
   GraphQLString,
   GraphQLFieldConfig,
   GraphQLFieldConfigArgumentMap,
+  GraphQLInputFieldConfigMap,
+  GraphQLBoolean,
+  GraphQLInputObjectType,
 } from "graphql"
+import { mutationWithClientMutationId, MutationConfig } from "graphql-relay"
 
 const IDFields = {}
 
@@ -130,3 +134,84 @@ export const FieldConfigWithNoArgsToBeRenamed: GraphQLFieldConfig<any, any> = {
     return artworkLoader(options)
   },
 }
+
+const inputFields: GraphQLInputFieldConfigMap = {
+  artistID: {
+    description: "The gravity ID for an Artist",
+    type: GraphQLString,
+  },
+}
+
+export const MutationWithSingleArg: MutationConfig = {
+  name: "MutationWithSingleArg",
+  inputFields: {
+    id: {
+      type: GraphQLString,
+    },
+    authenticityCertificate: {
+      type: GraphQLBoolean,
+    },
+    ...inputFields,
+  },
+  outputFields: {
+    consignmentSubmission: {
+      type: GraphQLString,
+
+      resolve: (
+        {
+          consignment_submission
+        }
+      ) => consignment_submission
+    },
+  },
+  mutateAndGetPayload: (
+    {
+      authenticityCertificate,
+      ..._submission
+    },
+    { submissionUpdateLoader }
+  ) => {
+    const submission = {
+      authenticity_certificate: authenticityCertificate,
+      ..._submission
+    };
+
+    return submissionUpdateLoader(submission.id, submission)
+  },
+}
+
+const CustomInputType = new GraphQLInputObjectType({
+  name: "CustomInputType",
+  fields: () => ({
+    someNestedField: {
+      type: GraphQLString,
+    },
+  }),
+})
+
+export const MutationWithObjectPatternArg = mutationWithClientMutationId({
+  name: "MutationWithObjectPatternArg",
+  inputFields: {
+    foo: {
+      type: CustomInputType,
+    },
+    artistID: {
+      description: "The gravity ID for an Artist",
+      type: GraphQLString,
+    },
+  },
+  outputFields: {
+    consignmentSubmission: {
+      type: GraphQLString,
+
+      resolve: (
+        {
+          consignment_submission
+        }
+      ) => consignment_submission
+    },
+  },
+  mutateAndGetPayload: ({ foo, artistID: artist_id }, { submissionUpdateLoader }) => {
+    return submissionUpdateLoader(foo, { artist_id })
+  },
+})

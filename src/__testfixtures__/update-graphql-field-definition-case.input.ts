@@ -4,7 +4,11 @@ import {
   GraphQLString,
   GraphQLFieldConfig,
   GraphQLFieldConfigArgumentMap,
+  GraphQLInputFieldConfigMap,
+  GraphQLBoolean,
+  GraphQLInputObjectType,
 } from "graphql"
+import { mutationWithClientMutationId, MutationConfig } from "graphql-relay"
 
 const IDFields = {}
 
@@ -94,3 +98,61 @@ export const FieldConfigWithNoArgsToBeRenamed: GraphQLFieldConfig<any, any> = {
     return artworkLoader(options)
   },
 }
+
+const inputFields: GraphQLInputFieldConfigMap = {
+  artist_id: {
+    description: "The gravity ID for an Artist",
+    type: GraphQLString,
+  },
+}
+
+export const MutationWithSingleArg: MutationConfig = {
+  name: "MutationWithSingleArg",
+  inputFields: {
+    id: {
+      type: GraphQLString,
+    },
+    authenticity_certificate: {
+      type: GraphQLBoolean,
+    },
+    ...inputFields,
+  },
+  outputFields: {
+    consignment_submission: {
+      type: GraphQLString,
+    },
+  },
+  mutateAndGetPayload: (submission, { submissionUpdateLoader }) => {
+    return submissionUpdateLoader(submission.id, submission)
+  },
+}
+
+const CustomInputType = new GraphQLInputObjectType({
+  name: "CustomInputType",
+  fields: () => ({
+    some_nested_field: {
+      type: GraphQLString,
+    },
+  }),
+})
+
+export const MutationWithObjectPatternArg = mutationWithClientMutationId({
+  name: "MutationWithObjectPatternArg",
+  inputFields: {
+    foo: {
+      type: CustomInputType,
+    },
+    artist_id: {
+      description: "The gravity ID for an Artist",
+      type: GraphQLString,
+    },
+  },
+  outputFields: {
+    consignment_submission: {
+      type: GraphQLString,
+    },
+  },
+  mutateAndGetPayload: ({ foo, artist_id }, { submissionUpdateLoader }) => {
+    return submissionUpdateLoader(foo, { artist_id })
+  },
+})

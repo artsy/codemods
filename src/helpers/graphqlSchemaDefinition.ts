@@ -12,7 +12,6 @@ import {
   Node,
   TSTypeAnnotation,
   TSTypeReference,
-  JSCodeshift,
   BlockStatement,
   ReturnStatement,
 } from "jscodeshift"
@@ -27,7 +26,7 @@ export function forEachArgumentMap(
   file: FileInfo,
   callback: (argumentMap: ObjectExpression) => void
 ) {
-  forEachFieldConfig(collection, file, fieldConfig => {
+  forEachOutputFieldConfig(collection, file, fieldConfig => {
     const argsProp = getProperty(fieldConfig, "args")
     if (ObjectProperty.check(argsProp)) {
       const argumentMap = getArgumentMap(argsProp, file)
@@ -88,7 +87,7 @@ export function getArgumentMap(prop: ObjectProperty, file: FileInfo) {
   return null
 }
 
-export function forEachFieldConfig(
+export function forEachOutputFieldConfig(
   collection: Collection<any>,
   file: FileInfo,
   callback: (
@@ -97,7 +96,7 @@ export function forEachFieldConfig(
     fieldMap: ObjectExpression | null
   ) => void
 ) {
-  forEachFieldConfigMapProperty(collection, file, (prop, fieldMap) => {
+  forEachOutputFieldConfigMapProperty(collection, file, (prop, fieldMap) => {
     const fieldConfig = getFieldConfig(prop, file)
     if (fieldConfig) {
       callback(fieldConfig, prop, fieldMap)
@@ -128,76 +127,28 @@ export function forEachFieldConfig(
   return collection
 }
 
-export function forEachFieldConfigMapProperty(
+export function forEachOutputFieldConfigMapProperty(
   collection: Collection<any>,
   file: FileInfo,
   callback: (property: ObjectProperty, fieldMap: ObjectExpression) => void
 ) {
-  forEachFieldConfigMap(collection, file, thunk => {
-    const fieldMap = unpackThunk(thunk, file)
-    if (fieldMap) {
-      fieldMap.properties.forEach((prop, i) => {
-        if (ObjectProperty.check(prop)) {
-          callback(prop, fieldMap)
-        } else if (SpreadElement.check(prop)) {
-          console.log(
-            `Skipping spread of \`${
-              (prop.argument as Identifier).name
-            }\` (${errorLocation(file, prop)})`
-          )
-        } else {
-          throw new Error(
-            `Unknown property type \`${prop.type}\` (${errorLocation(
-              file,
-              prop
-            )})`
-          )
-        }
-      })
-    }
+  forEachOutputFieldConfigMap(collection, file, fieldMap => {
+    withFieldConfigMapProperty(fieldMap, file, callback)
   })
   return collection
 }
 
-export function forEachFieldConfigMap(
+export function forEachOutputFieldConfigMap(
   collection: Collection<any>,
   file: FileInfo,
-  callback: (thunk: Node) => void
+  callback: (fieldMap: Node) => void
 ) {
-  collection
-    .find(VariableDeclarator, node => {
-      const typeAnnotation = (node.id as Identifier).typeAnnotation
-      if (TSTypeAnnotation.check(typeAnnotation)) {
-        const typeReference = typeAnnotation.typeAnnotation
-        if (TSTypeReference.check(typeReference)) {
-          const typeReferenceName = (typeReference.typeName as Identifier).name
-          if (typeReferenceName === "GraphQLFieldConfigMap") {
-            return true
-          } else if (typeReferenceName === "Thunk") {
-            const thunkTypeReference = typeReference.typeParameters!.params[0]
-            if (
-              TSTypeReference.check(thunkTypeReference) &&
-              (thunkTypeReference.typeName as Identifier).name ===
-                "GraphQLFieldConfigMap"
-            ) {
-              return true
-            } else {
-              throw new Error(
-                `Unexpected Thunk<…> type parameter (${errorLocation(
-                  file,
-                  thunkTypeReference
-                )})`
-              )
-            }
-          }
-        }
-      }
-      return false
-    })
-    .forEach(path => {
-      const node = path.node
-      callback(path.node.init!)
-    })
+  forEachFieldConfigMapVariable(
+    collection,
+    "GraphQLFieldConfigMap",
+    file,
+    callback
+  )
 
   collection
     .find(NewExpression, node => {
@@ -218,6 +169,187 @@ export function forEachFieldConfigMap(
           `Expected a config object (${errorLocation(file, config)})`
         )
       }
+    })
+
+  forEachMutationConfig(collection, file, mutationConfig => {
+    const outputFields = unpackThunk(
+      getProperty(mutationConfig, "outputFields")!.value,
+      file
+    )
+    if (outputFields) {
+      callback(outputFields)
+    }
+  })
+
+  return collection
+}
+
+export function forEachInputFieldConfigMapProperty(
+  collection: Collection<any>,
+  file: FileInfo,
+  callback: (property: ObjectProperty, fieldMap: ObjectExpression) => void
+) {
+  forEachInputFieldConfigMap(collection, file, fieldMap => {
+    withFieldConfigMapProperty(fieldMap, file, callback)
+  })
+  return collection
+}
+
+export function forEachInputFieldConfigMap(
+  collection: Collection<any>,
+  file: FileInfo,
+  callback: (fieldMap: Node) => void
+) {
+  forEachFieldConfigMapVariable(
+    collection,
+    "GraphQLInputFieldConfigMap",
+    file,
+    callback
+  )
+
+  forEachMutationConfig(collection, file, mutationConfig => {
+    const inputFields = unpackThunk(
+      getProperty(mutationConfig, "inputFields")!.value,
+      file
+    )
+    if (inputFields) {
+      callback(inputFields)
+    }
+  })
+
+  collection
+    .find(NewExpression, node => {
+      const callee = node.callee
+      return (
+        Identifier.check(callee) && callee.name === "GraphQLInputObjectType"
+      )
+    })
+    .forEach(path => {
+      const node = path.node
+      const config = node.arguments[0]
+      if (ObjectExpression.check(config)) {
+        const fieldMap = unpackThunk(getProperty(config, "fields")!.value, file)
+        if (fieldMap) {
+          callback(fieldMap)
+        }
+      } else {
+        throw new Error(
+          `Expected a config object (${errorLocation(file, config)})`
+        )
+      }
+    })
+
+  return collection
+}
+
+export function forEachMutationConfig(
+  collection: Collection<any>,
+  file: FileInfo,
+  callback: (mutationConfig: ObjectExpression) => void
+) {
+  const yieldMutationConfig = (mutationConfig: Node) => {
+    if (ObjectExpression.check(mutationConfig)) {
+      callback(mutationConfig)
+    } else {
+      console.log(
+        `Skipping mutation config that's not defined as object expression (${errorLocation(
+          file,
+          mutationConfig
+        )})`
+      )
+    }
+  }
+
+  collection
+    .find(VariableDeclarator, node => {
+      const typeAnnotation = (node.id as Identifier).typeAnnotation
+      if (TSTypeAnnotation.check(typeAnnotation)) {
+        const typeReference = typeAnnotation.typeAnnotation
+        if (TSTypeReference.check(typeReference)) {
+          const typeReferenceName = (typeReference.typeName as Identifier).name
+          if (typeReferenceName === "MutationConfig") {
+            return true
+          }
+        }
+      }
+      return false
+    })
+    .forEach(path => {
+      yieldMutationConfig(path.node.init!)
+    })
+
+  collection.find(CallExpression, node => {
+    if ((node.callee as Identifier).name === "mutationWithClientMutationId") {
+      yieldMutationConfig(node.arguments[0])
+    }
+  })
+}
+
+function withFieldConfigMapProperty(
+  thunk: Node,
+  file: FileInfo,
+  callback: (property: ObjectProperty, fieldMap: ObjectExpression) => void
+) {
+  const fieldMap = unpackThunk(thunk, file)
+  if (fieldMap) {
+    fieldMap.properties.forEach((prop, i) => {
+      if (ObjectProperty.check(prop)) {
+        callback(prop, fieldMap)
+      } else if (SpreadElement.check(prop)) {
+        console.log(
+          `Skipping spread of \`${
+            (prop.argument as Identifier).name
+          }\` (${errorLocation(file, prop)})`
+        )
+      } else {
+        throw new Error(
+          `Unknown property type \`${prop.type}\` (${errorLocation(
+            file,
+            prop
+          )})`
+        )
+      }
+    })
+  }
+}
+
+function forEachFieldConfigMapVariable(
+  collection: Collection<any>,
+  typeName: string,
+  file: FileInfo,
+  callback: (thunk: Node) => void
+) {
+  collection
+    .find(VariableDeclarator, node => {
+      const typeAnnotation = (node.id as Identifier).typeAnnotation
+      if (TSTypeAnnotation.check(typeAnnotation)) {
+        const typeReference = typeAnnotation.typeAnnotation
+        if (TSTypeReference.check(typeReference)) {
+          const typeReferenceName = (typeReference.typeName as Identifier).name
+          if (typeReferenceName === typeName) {
+            return true
+          } else if (typeReferenceName === "Thunk") {
+            const thunkTypeReference = typeReference.typeParameters!.params[0]
+            if (
+              TSTypeReference.check(thunkTypeReference) &&
+              (thunkTypeReference.typeName as Identifier).name === typeName
+            ) {
+              return true
+            } else {
+              throw new Error(
+                `Unexpected Thunk<…> type parameter (${errorLocation(
+                  file,
+                  thunkTypeReference
+                )})`
+              )
+            }
+          }
+        }
+      }
+      return false
+    })
+    .forEach(path => {
+      callback(path.node.init!)
     })
 
   return collection

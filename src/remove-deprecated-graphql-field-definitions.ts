@@ -18,13 +18,13 @@ import {
 import { errorLocation } from "./helpers/errorLocation"
 import { getProperty } from "./helpers/getProperty"
 import {
-  forEachFieldConfigMapProperty,
+  forEachOutputFieldConfigMapProperty,
   getFieldConfig,
 } from "./helpers/graphqlSchemaDefinition"
 
 const transform: Transform = (file, api, _options) => {
   const j = api.jscodeshift
-  return forEachFieldConfigMapProperty(
+  return forEachOutputFieldConfigMapProperty(
     j(file.source),
     file,
     (prop, fieldMap) => {
