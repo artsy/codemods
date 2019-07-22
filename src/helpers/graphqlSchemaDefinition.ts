@@ -330,19 +330,10 @@ function forEachFieldConfigMapVariable(
             return true
           } else if (typeReferenceName === "Thunk") {
             const thunkTypeReference = typeReference.typeParameters!.params[0]
-            if (
+            return (
               TSTypeReference.check(thunkTypeReference) &&
               (thunkTypeReference.typeName as Identifier).name === typeName
-            ) {
-              return true
-            } else {
-              throw new Error(
-                `Unexpected Thunk<…> type parameter (${errorLocation(
-                  file,
-                  thunkTypeReference
-                )})`
-              )
-            }
+            )
           }
         }
       }
