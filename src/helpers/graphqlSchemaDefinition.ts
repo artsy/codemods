@@ -198,7 +198,7 @@ export function forEachInputFieldConfigMapProperty(
 export function forEachInputFieldConfigMap(
   collection: Collection<any>,
   file: FileInfo,
-  callback: (fieldMap: Node) => void
+  callback: (fieldMap: ObjectExpression) => void
 ) {
   forEachFieldConfigMapVariable(
     collection,

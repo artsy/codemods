@@ -139,8 +139,18 @@ const inputFields: GraphQLInputFieldConfigMap = {
   artistID: {
     description: "The gravity ID for an Artist",
     type: GraphQLString,
-  },
+  }
+}/*
+{
+  const {
+    artistID
+  } = newFields;
+
+  const oldFields = {
+    artistID: artist_id
+  };
 }
+*/
 
 export const MutationWithSingleArg: MutationConfig = {
   name: "MutationWithSingleArg",
@@ -148,11 +158,25 @@ export const MutationWithSingleArg: MutationConfig = {
     id: {
       type: GraphQLString,
     },
+
     authenticityCertificate: {
       type: GraphQLBoolean,
     },
-    ...inputFields,
-  },
+
+    ...inputFields
+  }/*
+  {
+    const {
+      authenticityCertificate,
+      ..._newFields
+    } = newFields;
+
+    const oldFields = {
+      authenticityCertificate: authenticity_certificate,
+      ..._newFields
+    };
+  }
+  */,
   outputFields: {
     consignmentSubmission: {
       type: GraphQLString,
@@ -185,8 +209,18 @@ const CustomInputType = new GraphQLInputObjectType({
   fields: () => ({
     someNestedField: {
       type: GraphQLString,
-    },
-  }),
+    }
+  }/*
+  {
+    const {
+      someNestedField
+    } = newFields;
+
+    const oldFields = {
+      someNestedField: some_nested_field
+    };
+  }
+  */),
 })
 
 export const MutationWithObjectPatternArg = mutationWithClientMutationId({
@@ -195,11 +229,24 @@ export const MutationWithObjectPatternArg = mutationWithClientMutationId({
     foo: {
       type: CustomInputType,
     },
+
     artistID: {
       description: "The gravity ID for an Artist",
       type: GraphQLString,
-    },
-  },
+    }
+  }/*
+  {
+    const {
+      artistID,
+      ..._newFields
+    } = newFields;
+
+    const oldFields = {
+      artistID: artist_id,
+      ..._newFields
+    };
+  }
+  */,
   outputFields: {
     consignmentSubmission: {
       type: GraphQLString,

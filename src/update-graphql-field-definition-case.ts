@@ -20,7 +20,11 @@ import {
   SpreadElement,
   FileInfo,
   JSCodeshift,
+  NewExpression,
+  VariableDeclarator,
+  VariableDeclaration,
 } from "jscodeshift"
+import recast, { ASTNode } from "recast"
 
 import { errorLocation } from "./helpers/errorLocation"
 import { getProperty } from "./helpers/getProperty"
@@ -32,8 +36,11 @@ import {
   getArgumentMap,
   forEachInputFieldConfigMapProperty,
   forEachMutationConfig,
+  forEachInputFieldConfigMap,
 } from "./helpers/graphqlSchemaDefinition"
 import { ExpressionKind, PatternKind } from "ast-types/gen/kinds"
+import { variableDeclaration } from "@babel/types"
+import { fromNodes } from "jscodeshift/src/Collection"
 
 const transform: Transform = (file, api, _options) => {
   const j = api.jscodeshift
@@ -135,6 +142,50 @@ const transform: Transform = (file, api, _options) => {
       const mutateFunction = getProperty(mutationConfig, "mutateAndGetPayload")!
         .value
       renameFunctionParams(inputFieldsMap, mutateFunction, 0, file, j)
+    }
+  })
+
+  forEachInputFieldConfigMap(collection, file, fieldMap => {
+    const argsThatNeedRenaming = propertiesWithSnakeCase(fieldMap)
+    if (argsThatNeedRenaming.length > 0) {
+      const newFields = j.objectExpression([])
+      const oldFields = j.objectExpression([])
+      argsThatNeedRenaming.forEach(prop => {
+        if (ObjectProperty.check(prop)) {
+          const oldName = ((prop as ObjectProperty).key as Identifier).name
+          const newName = camelize(oldName)
+          if (newName !== oldName) {
+            newFields.properties.push(
+              j.objectProperty.from({
+                key: j.identifier(newName),
+                value: j.identifier(newName),
+                shorthand: true,
+              })
+            )
+            oldFields.properties.push(
+              j.objectProperty(j.identifier(newName), j.identifier(oldName))
+            )
+          }
+        }
+      })
+      if (argsThatNeedRenaming.length < fieldMap.properties.length) {
+        newFields.properties.push(j.spreadElement(j.identifier("_newFields")))
+        oldFields.properties.push(j.spreadElement(j.identifier("_newFields")))
+      }
+      const source = recast.prettyPrint(
+        j.blockStatement([
+          j.variableDeclaration("const", [
+            j.variableDeclarator(newFields, j.identifier("newFields")),
+          ]),
+          j.variableDeclaration("const", [
+            j.variableDeclarator(j.identifier("oldFields"), oldFields),
+          ]),
+        ]),
+        { tabWidth: 2 }
+      ).code
+      const comments = fieldMap.comments || []
+      comments.push(j.commentBlock(`\n${source}\n`, false, true))
+      fieldMap.comments = comments
     }
   })
 
