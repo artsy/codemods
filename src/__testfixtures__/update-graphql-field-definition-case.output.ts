@@ -3,9 +3,15 @@ import {
   GraphQLFloat,
   GraphQLString,
   GraphQLFieldConfig,
+  GraphQLFieldConfigArgumentMap,
 } from "graphql"
 
 const IDFields = {}
+
+// import { pageable } from "relay-cursor-paging"
+function pageable(args: GraphQLFieldConfigArgumentMap) {
+  return args
+}
 
 export const TypeWithThunk = new GraphQLObjectType<any, any>({
   name: "TypeWithThunk",
@@ -63,14 +69,14 @@ export const TypeWithoutThunk = new GraphQLObjectType<any, any>({
   fields: {
     fieldWithArgsCapturedInSingleParam: {
       type: GraphQLString,
-      args: {
+      args: pageable({
         artworkID: {
           type: GraphQLString,
         },
         other: {
           type: GraphQLString,
         },
-      },
+      }),
       resolve: (
         _source,
         {
@@ -90,20 +96,37 @@ export const TypeWithoutThunk = new GraphQLObjectType<any, any>({
   },
 })
 
-export const SingleFieldConfigWithObjectPatternArgs: GraphQLFieldConfig<
-  any,
-  any
-> = {
+const argsMap: GraphQLFieldConfigArgumentMap = {
+  otherID: {
+    type: GraphQLString,
+  },
+}
+
+export const FieldConfigWithObjectPatternArgs: GraphQLFieldConfig<any, any> = {
   type: GraphQLString,
   args: {
     artworkID: {
       type: GraphQLString,
     },
-    otherID: {
+    ...argsMap,
+  },
+  resolve: (
+    _source,
+    { artworkID: artwork_id, otherID: some_other },
+    { artworkLoader }
+  ) => {
+    return artworkLoader(artwork_id, { some_other })
+  },
+}
+
+export const FieldConfigWithNoArgsToBeRenamed: GraphQLFieldConfig<any, any> = {
+  type: GraphQLString,
+  args: {
+    artworkID: {
       type: GraphQLString,
     },
   },
-  resolve: (_source, { artworkID: artwork_id, otherID: some_other }, { artworkLoader }) => {
-    return artworkLoader(artwork_id, { some_other })
+  resolve: (_source, options, { artworkLoader }) => {
+    return artworkLoader(options)
   },
 }

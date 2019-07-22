@@ -26,6 +26,8 @@ import {
   forEachFieldConfigMapProperty,
   getFieldConfig,
   forEachFieldConfig,
+  forEachArgumentMap,
+  getArgumentMap,
 } from "./helpers/graphqlSchemaDefinition"
 
 const transform: Transform = (file, api, _options) => {
@@ -76,91 +78,44 @@ const transform: Transform = (file, api, _options) => {
     }
   })
 
+  /**
+   * First rename use of args in resolve function, because we'd lose the
+   * original name if we'd first rename the actual arg definition.
+   */
   forEachFieldConfig(collection, file, fieldConfig => {
-    /**
-     * Rename arguments
-     *
-     * Turns out that we really have very few args, less that need
-     * renaming, and of those only a few can "trivialliy" be done through a
-     * codemod like the one below. So not going to spend more time on this.
-     * They are called out as things that are skipped and need to be
-     * manually fixed, that should be good enough.
-     */
     const argsProp = getProperty(fieldConfig, "args")
     if (ObjectProperty.check(argsProp)) {
-      const args = argsProp.value
-      if (ObjectExpression.check(args)) {
-        const renamedArgs: Record<string, string> = {}
-
-        args.properties.forEach(argProp => {
-          if (ObjectProperty.check(argProp)) {
-            const argKey = argProp.key as Identifier
-            const oldName = argKey.name
-            if (oldName.includes("_")) {
-              const newName = camelize(oldName)
-              const existingNewName = getProperty(args, newName)
-              if (existingNewName) {
-                console.log(
-                  `Skipping renaming \`${oldName}\` as another arg by the ` +
-                    `name of \`${newName}\` already exists and is presumed ` +
-                    `to supersede it (${errorLocation(file, existingNewName)})`
-                )
-              } else {
-                argProp.key = j.identifier(newName)
-                renamedArgs[oldName] = newName
-              }
-            }
-          }
-        })
-
-        if (Object.keys(renamedArgs).length > 0) {
+      const argumentMap = getArgumentMap(argsProp, file)
+      if (argumentMap) {
+        const argsThatNeedRenaming = propertiesWithSnakeCase(argumentMap)
+        if (argsThatNeedRenaming.length > 0) {
           const resolve = getProperty(fieldConfig, "resolve")!
           const resolveFunction = resolve.value
           if (ArrowFunctionExpression.check(resolveFunction)) {
             const argsParam = resolveFunction.params[1]
             if (argsParam) {
               if (ObjectPattern.check(argsParam)) {
-                let restProperty: RestProperty | null = null
-                argsParam.properties.forEach(paramProp => {
-                  if (ObjectProperty.check(paramProp)) {
-                    const oldName = (paramProp.key as Identifier).name
-                    const newName = renamedArgs[oldName]
-                    if (newName) {
-                      /**
-                       * Rename { oldName } or { oldName: oldName } to
-                       * { newName: oldName } so that we don’t need to
-                       * make any further changes to the body, which is
-                       * safest.
-                       */
-                      if ((paramProp.value as Identifier).name === oldName) {
-                        paramProp.shorthand = false
-                        paramProp.key = j.identifier(newName)
-                        paramProp.value = j.identifier(oldName)
-                      } else {
-                        /**
-                         * In the case of { oldName: otherName } we rename to
-                         * { newName: otherName }.
-                         */
-                        paramProp.key = j.identifier(newName)
-                      }
-                      /**
-                       * Keep track of wether we've seen all renamed args so we
-                       * can decide if we need to visit a rest property.
-                       */
-                      delete renamedArgs[oldName]
-                    }
-                  } else if (RestProperty.check(paramProp)) {
-                    restProperty = paramProp
+                propertiesWithSnakeCase(argsParam).forEach(paramProp => {
+                  const oldName = (paramProp.key as Identifier).name
+                  const newName = camelize(oldName)
+                  /**
+                   * Rename { oldName } or { oldName: oldName } to
+                   * { newName: oldName } so that we don’t need to
+                   * make any further changes to the body, which is
+                   * safest.
+                   */
+                  if ((paramProp.value as Identifier).name === oldName) {
+                    paramProp.shorthand = false
+                    paramProp.key = j.identifier(newName)
+                    paramProp.value = j.identifier(oldName)
+                  } else {
+                    /**
+                     * In the case of { oldName: otherName } we rename to
+                     * { newName: otherName }.
+                     */
+                    paramProp.key = j.identifier(newName)
                   }
                 })
-                if (restProperty && Object.keys(renamedArgs).length > 0) {
-                  throw new Error(
-                    `Skipping rest property that holds renamed args (${errorLocation(
-                      file,
-                      restProperty
-                    )})`
-                  )
-                }
               } else if (Identifier.check(argsParam)) {
                 const paramProperties: Array<ObjectProperty | RestProperty> = []
                 const newParamProperties: Array<
@@ -176,7 +131,8 @@ const transform: Transform = (file, api, _options) => {
                  * }
                  * ```
                  */
-                Object.keys(renamedArgs).forEach(oldName => {
+                argsThatNeedRenaming.forEach(argProp => {
+                  const oldName = (argProp.key as Identifier).name
                   const newName = camelize(oldName)
                   paramProperties.push(
                     j.objectProperty.from({
@@ -202,7 +158,9 @@ const transform: Transform = (file, api, _options) => {
                  * }
                  * ```
                  */
-                if (Object.keys(renamedArgs).length < args.properties.length) {
+                if (
+                  argsThatNeedRenaming.length < argumentMap.properties.length
+                ) {
                   paramProperties.push(
                     j.restProperty(
                       j.identifier(intermediateName(argsParam.name))
@@ -261,11 +219,40 @@ const transform: Transform = (file, api, _options) => {
     }
   })
 
+  /**
+   * Then rename actual arg definition.
+   */
+  forEachArgumentMap(collection, file, argumentMap => {
+    propertiesWithSnakeCase(argumentMap).forEach(argProp => {
+      const oldName = (argProp.key as Identifier).name
+      const newName = camelize(oldName)
+      const existingNewName = getProperty(argumentMap, newName)
+      if (existingNewName) {
+        console.log(
+          `Skipping renaming \`${oldName}\` as another arg by the ` +
+            `name of \`${newName}\` already exists and is presumed ` +
+            `to supersede it (${errorLocation(file, existingNewName)})`
+        )
+      } else {
+        argProp.key = j.identifier(newName)
+      }
+    })
+  })
+
   return collection.toSource()
 }
 
 function intermediateName(name: string) {
   return `_${name}`
+}
+
+function propertiesWithSnakeCase(object: ObjectExpression | ObjectPattern) {
+  return (object.properties as any[]).filter(prop => {
+    if (ObjectProperty.check(prop)) {
+      return (prop.key as Identifier).name.includes("_")
+    }
+    return false
+  }) as ObjectProperty[]
 }
 
 function camelize(input: string) {
@@ -281,6 +268,8 @@ function camelize(input: string) {
         return "UTC"
       case "md":
         return "MD"
+      case "jwt":
+        return "JWT"
       default:
         return c
     }

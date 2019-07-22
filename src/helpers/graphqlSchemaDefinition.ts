@@ -17,9 +17,76 @@ import {
   ReturnStatement,
 } from "jscodeshift"
 import { Collection } from "jscodeshift/src/Collection"
+import { ExpressionKind } from "ast-types/gen/kinds"
 
 import { errorLocation } from "./errorLocation"
 import { getProperty } from "./getProperty"
+
+export function forEachArgumentMap(
+  collection: Collection<any>,
+  file: FileInfo,
+  callback: (argumentMap: ObjectExpression) => void
+) {
+  forEachFieldConfig(collection, file, fieldConfig => {
+    const argsProp = getProperty(fieldConfig, "args")
+    if (ObjectProperty.check(argsProp)) {
+      const argumentMap = getArgumentMap(argsProp, file)
+      if (argumentMap) {
+        callback(argumentMap)
+      }
+    }
+  })
+
+  collection
+    .find(VariableDeclarator, node => {
+      const typeAnnotation = (node.id as Identifier).typeAnnotation
+      if (TSTypeAnnotation.check(typeAnnotation)) {
+        const typeReference = typeAnnotation.typeAnnotation
+        if (TSTypeReference.check(typeReference)) {
+          const typeReferenceName = (typeReference.typeName as Identifier).name
+          if (typeReferenceName === "GraphQLFieldConfigArgumentMap") {
+            return true
+          }
+        }
+      }
+      return false
+    })
+    .forEach(path => {
+      const argumentMap = path.node.init!
+      if (ObjectExpression.check(argumentMap)) {
+        callback(argumentMap)
+      } else {
+        console.log(
+          `Skipping args that isn't defined as an object expression ${errorLocation(
+            file,
+            argumentMap
+          )}`
+        )
+      }
+    })
+
+  return collection
+}
+
+export function getArgumentMap(prop: ObjectProperty, file: FileInfo) {
+  let argumentMap = prop.value
+  if (CallExpression.check(argumentMap)) {
+    if ((argumentMap.callee as Identifier).name === "pageable") {
+      argumentMap = argumentMap.arguments[0] as ExpressionKind
+    }
+  }
+  if (ObjectExpression.check(argumentMap)) {
+    return argumentMap
+  } else if (argumentMap) {
+    console.log(
+      `Skipping args that isn't defined as an object expression ${errorLocation(
+        file,
+        argumentMap
+      )}`
+    )
+  }
+  return null
+}
 
 export function forEachFieldConfig(
   collection: Collection<any>,
