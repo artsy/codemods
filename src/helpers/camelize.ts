@@ -1,4 +1,7 @@
 export function camelize(input: string) {
+  if (input.startsWith("__")) {
+    return input
+  }
   const components = input.split("_").map(c => {
     switch (c) {
       case "id":
