@@ -1,3 +1,22 @@
+/**
+ * 1. Run this codemod:
+ *
+ *    ```bash
+ *    $ jscodeshift --extensions=ts,tsx \
+ *      --transform=../codemods/src/update-graphql-case-in-clients.ts \
+ *      src
+ *    ```
+ *
+ * 2. Run prettier: `yarn prettier-project`
+ *
+ * 3. Run relay-compiler: `yarn relay`
+ *
+ * 4. Run type-checker: `yarn type-check -w`
+ *
+ * 5. Find TODOs added by codemod around mutation inputs and ensure the inputs
+ *    have their keys camelCased.
+ */
+
 import { Transform, TaggedTemplateExpression, Identifier } from "jscodeshift"
 import {
   parse as parseGraphQL,
@@ -17,9 +36,10 @@ const transform: Transform = (file, api, _options) => {
       return Identifier.check(tag) && tag.name === "graphql"
     })
     .forEach(path => {
+      let isMutation = false
       const templateElement = path.node.quasi.quasis[0]
       const graphqlDoc = parseGraphQL(templateElement.value.raw)
-      let isMutation = false
+
       const newGraphQLDoc = visit(graphqlDoc, {
         OperationDefinition: operationNode => {
           isMutation = operationNode.operation === "mutation"
@@ -60,6 +80,7 @@ const transform: Transform = (file, api, _options) => {
           return undefined
         },
       })
+
       const newGraphQLDocSource = printGraphQL(newGraphQLDoc)
       const newTemplateElement = j.templateElement(
         {
@@ -72,7 +93,11 @@ const transform: Transform = (file, api, _options) => {
 
       if (isMutation) {
         const comments = path.node.comments || []
-        comments.push(j.commentLine(" TODO: Inputs to the mutation might have changed case of the keys!"))
+        comments.push(
+          j.commentLine(
+            " TODO: Inputs to the mutation might have changed case of the keys!"
+          )
+        )
         path.node.comments = comments
       }
     })
