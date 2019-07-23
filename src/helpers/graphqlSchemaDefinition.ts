@@ -292,7 +292,9 @@ function withFieldConfigMapProperty(
 ) {
   const fieldMap = unpackThunk(thunk, file)
   if (fieldMap) {
-    fieldMap.properties.forEach((prop, i) => {
+    // Mutating an array while iterating over it leads to hurt
+    const props = [...fieldMap.properties]
+    props.forEach((prop, i) => {
       if (ObjectProperty.check(prop)) {
         callback(prop, fieldMap)
       } else if (SpreadElement.check(prop)) {
