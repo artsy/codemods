@@ -1,0 +1,38 @@
+diff --git a/node_modules/@types/jscodeshift/src/Collection.d.ts b/node_modules/@types/jscodeshift/src/Collection.d.ts
+index 2cab87b..ad28b4a 100644
+--- a/node_modules/@types/jscodeshift/src/Collection.d.ts
++++ b/node_modules/@types/jscodeshift/src/Collection.d.ts
+@@ -64,7 +64,7 @@ export interface Collection<N>
+             i: number,
+             paths: Array<ASTPath<N>>
+         ) => ASTPath<T> | Array<ASTPath<T>> | null | undefined,
+-        type: recast.Type<any>
++        type?: recast.Type<any>
+     ): Collection<T>;
+ 
+     /** Returns the number of elements in this collection. */
+diff --git a/node_modules/@types/jscodeshift/src/collections/Node.d.ts b/node_modules/@types/jscodeshift/src/collections/Node.d.ts
+index d1e74f3..7eb7496 100644
+--- a/node_modules/@types/jscodeshift/src/collections/Node.d.ts
++++ b/node_modules/@types/jscodeshift/src/collections/Node.d.ts
+@@ -8,7 +8,7 @@ export interface TraversalMethods {
+     /**
+      * Find nodes of a specific type within the nodes of this collection.
+      */
+-    find<T>(type: recast.Type<T>, filter?: ((value: any) => boolean) | object): Collection.Collection<T>;
++    find<T>(type: recast.Type<T>, filter?: ((value: T) => boolean) | object): Collection.Collection<T>;
+ 
+     /**
+      * Returns a collection containing the paths that create the scope of the
+diff --git a/node_modules/@types/jscodeshift/src/testUtils.d.ts b/node_modules/@types/jscodeshift/src/testUtils.d.ts
+index 4a6a650..272ee7c 100644
+--- a/node_modules/@types/jscodeshift/src/testUtils.d.ts
++++ b/node_modules/@types/jscodeshift/src/testUtils.d.ts
+@@ -2,5 +2,6 @@ export function defineTest(
+   dirName: string,
+   transformName: string,
+   options: any,
+-  testFilePrefix?: string
++  testFilePrefix?: string,
++  testFileExtname?: string
+ ): () => any;

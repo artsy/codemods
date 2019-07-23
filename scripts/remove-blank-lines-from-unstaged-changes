@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+#
+# recast has an issue where blank lines get added around new properties https://github.com/benjamn/recast/issues/370
+# This script can remove those lines by relying on git to detect them.
+#
+# From https://gist.github.com/jackaldridge/68b39a8e1de71384b8caaeb78ee10cda
+
+git diff --ignore-all-space --ignore-blank-lines | sed 's/^\+$/\+REMOVE_ME_IM_A_BLANK_LINE/g' | \
+    git apply --reject --cached --ignore-space-change
+
+git checkout -- .
+git diff --cached --name-only | xargs sed -i '' '/^REMOVE_ME_IM_A_BLANK_LINE$/d'
+git add .

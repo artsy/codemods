@@ -1,0 +1,34 @@
+{
+  "name": "@artsy/codemods",
+  "version": "0.0.1",
+  "repository": "https://github.com/artsy/codemods.git",
+  "license": "MIT",
+  "scripts": {
+    "prepare": "patch-package",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@types/jscodeshift": "^0.6.1",
+    "@types/node": "^12.6.8",
+    "jscodeshift": "^0.6.4",
+    "patch-package": "^6.1.2",
+    "prettier": "^1.18.2",
+    "typescript": "^3.5.3"
+  },
+  "prettier": {
+    "semi": false,
+    "singleQuote": false,
+    "trailingComma": "es5",
+    "bracketSpacing": true
+  },
+  "devDependencies": {
+    "@babel/core": "^7.5.5",
+    "@babel/preset-env": "^7.5.5",
+    "@babel/preset-typescript": "^7.3.3",
+    "@types/graphql": "^14.2.2",
+    "@types/graphql-relay": "^0.4.9",
+    "@types/jest": "^24.0.15",
+    "babel-jest": "^24.8.0",
+    "jest": "^24.8.0"
+  }
+}
