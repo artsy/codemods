@@ -20,9 +20,6 @@ import {
   SpreadElement,
   FileInfo,
   JSCodeshift,
-  NewExpression,
-  VariableDeclarator,
-  VariableDeclaration,
 } from "jscodeshift"
 import recast, { ASTNode } from "recast"
 
@@ -39,8 +36,7 @@ import {
   forEachInputFieldConfigMap,
 } from "./helpers/graphqlSchemaDefinition"
 import { ExpressionKind, PatternKind } from "ast-types/gen/kinds"
-import { variableDeclaration } from "@babel/types"
-import { fromNodes } from "jscodeshift/src/Collection"
+import { camelize } from "./helpers/camelize"
 
 const transform: Transform = (file, api, _options) => {
   const j = api.jscodeshift
@@ -379,34 +375,6 @@ function propertiesWithSnakeCase(object: ObjectExpression | ObjectPattern) {
     }
     return false
   }) as ObjectProperty[]
-}
-
-function camelize(input: string) {
-  const components = input.split("_").map(c => {
-    switch (c) {
-      case "id":
-        return "ID"
-      case "url":
-        return "URL"
-      case "usd":
-        return "USD"
-      case "utc":
-        return "UTC"
-      case "md":
-        return "MD"
-      case "jwt":
-        return "JWT"
-      default:
-        return c
-    }
-  })
-  return [
-    components[0],
-    components
-      .slice(1)
-      .map(c => c[0].toUpperCase() + c.substring(1))
-      .join(""),
-  ].join("")
 }
 
 export const parser = "ts"
