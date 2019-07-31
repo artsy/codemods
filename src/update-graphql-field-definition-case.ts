@@ -357,7 +357,10 @@ function renameFunctionParams(
           resolveBody.body.unshift(
             j.variableDeclaration("const", [
               j.variableDeclarator(
-                j.identifier(argsParam.name),
+                j.identifier.from({
+                  name: argsParam.name,
+                  typeAnnotation: j.tsTypeAnnotation(j.tsAnyKeyword()),
+                }),
                 j.objectExpression(newParamProperties)
               ),
             ])

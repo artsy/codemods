@@ -89,7 +89,7 @@ export const TypeWithoutThunk = new GraphQLObjectType<any, any>({
         },
         { artworkLoader }
       ) => {
-        const options = {
+        const options: any = {
           artwork_id: artworkID,
           ..._options
         };
@@ -195,7 +195,7 @@ export const MutationWithSingleArg: MutationConfig = {
     },
     { submissionUpdateLoader }
   ) => {
-    const submission = {
+    const submission: any = {
       authenticity_certificate: authenticityCertificate,
       ..._submission
     };
