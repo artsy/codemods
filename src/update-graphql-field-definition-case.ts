@@ -1,11 +1,22 @@
 /**
- * First remove deprecated fields from the schema, as there will likely be some
- * fields that were already renamed to `camelCase` and the `snake_case` was
- * deprecated.
+ * 1. Remove deprecated fields with other codemod.
  *
- * You will want to run the `remove-blank-lines-from-unstaged-changes` script after performing this codemod.
+ * 2. Run this codemod, and you likely want to filter out these warnings:
  *
- * jscodeshift --transform=../codemods/src/update-graphql-field-definition-case.ts --extensions=ts src/schema && ../codemods/scripts/remove-blank-lines-from-unstaged-changes && yarn prettier-project
+ *    ```bash
+ *    $ jscodeshift --extensions=ts --ignore-pattern='src/schema/v2/*' \
+ *                  --transform=../codemods/src/update-graphql-field-definition-case.ts \
+ *                  src/schema \
+ *      | grep -v -E 'spread of.+Field|field config by variable reference|function call `(markdown|initials|amount|filterArtworks|numeral|money)'
+ *    ```
+ *
+ * 3. Run the `remove-blank-lines-from-unstaged-changes` script.
+ *
+ * 4. Run prettier: `yarn prettier-project`
+ *
+ * 5. Run the type-checker and fix any issues: `yarn type-check -w`
+ *
+ * 6. Dump the schema and look for left-over `snake_case`: `yarn dump:local`
  */
 
 import {

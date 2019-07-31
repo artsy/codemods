@@ -12,12 +12,12 @@
  *      | grep -v -E 'spread of.+Field|field config by variable reference|function call `(markdown|initials|amount|filterArtworks|numeral|money)'
  *    ```
  *
- * 3. Run the type-checker and find places where field configs/types were
+ * 3. Run the `remove-blank-lines-from-unstaged-changes` script.
+ *
+ * 4. Run prettier: `yarn prettier-project`
+ *
+ * 5. Run the type-checker and find places where field configs/types were
  *    emptied but not yet their references: `yarn type-check -w`
- *
- * 4. Run the `remove-blank-lines-from-unstaged-changes` script.
- *
- * 5. Run prettier: `yarn prettier-project`
  *
  * 6. Dump the schema and look for left-over deprecations: `yarn dump:local`
  */
