@@ -33,7 +33,7 @@ commitMutation(null, {
   graphql`mutation ArtistListItemFollowArtistMutation($input: FollowArtistInput!) {
   followArtist(input: $input) {
     artist {
-      id: ID
+      id
       is_followed: isFollowed
     }
   }

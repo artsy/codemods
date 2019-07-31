@@ -1,5 +1,5 @@
 export function camelize(input: string) {
-  if (input.startsWith("__")) {
+  if (input.startsWith("__") || !input.includes("_")) {
     return input
   }
   const components = input.split("_").map(c => {
