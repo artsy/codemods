@@ -7,7 +7,9 @@
  *    $ jscodeshift --extensions=ts --ignore-pattern='src/schema/v2/v2/*' \
  *                  --transform=../codemods/src/update-graphql-field-definition-case.ts \
  *                  src/schema/v2 \
- *      | grep -v -E 'spread of.+Field|field config by variable reference|function call `(markdown|initials|amount|filterArtworks|numeral|money)'
+ *      | grep -v -E 'spread of.+Field|field config by variable reference|function call `(markdown|initials|amount|filterArtworks|numeral|money)' \
+ *      | sort \
+ *      | uniq
  *    ```
  *
  * 3. Run the `remove-blank-lines-from-unstaged-changes` script.
@@ -32,7 +34,7 @@ import {
   FileInfo,
   JSCodeshift,
 } from "jscodeshift"
-import recast, { ASTNode } from "recast"
+import recast from "recast"
 
 import { errorLocation } from "./helpers/errorLocation"
 import { getProperty } from "./helpers/getProperty"
