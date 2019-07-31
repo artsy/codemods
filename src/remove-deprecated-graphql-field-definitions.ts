@@ -6,9 +6,9 @@
  * 2. Run this codemod, and you likely want to filter out these warnings:
  *
  *    ```bash
- *    $ jscodeshift --extensions=ts --ignore-pattern='src/schema/v2/*' \
+ *    $ jscodeshift --extensions=ts --ignore-pattern='src/schema/v2/v2/*' \
  *                  --transform=../codemods/src/remove-deprecated-graphql-field-definitions.ts \
- *                  src/schema \
+ *                  src/schema/v2 \
  *      | grep -v -E 'spread of.+Field|field config by variable reference|function call `(markdown|initials|amount|filterArtworks|numeral|money)'
  *    ```
  *
