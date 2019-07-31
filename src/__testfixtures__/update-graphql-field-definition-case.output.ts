@@ -94,7 +94,7 @@ export const TypeWithoutThunk = new GraphQLObjectType<any, any>({
           ..._options
         };
 
-        return artworkLoader(options.artwork_id, { other: options.other })
+        return artworkLoader(options.artwork_id, { other: options.other });
       },
     },
   },
@@ -200,7 +200,7 @@ export const MutationWithSingleArg: MutationConfig = {
       ..._submission
     };
 
-    return submissionUpdateLoader(submission.id, submission)
+    return submissionUpdateLoader(submission.id, submission);
   },
 }
 

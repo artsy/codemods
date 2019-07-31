@@ -348,7 +348,11 @@ function renameFunctionParams(
          * }
          * ```
          */
-        const resolveBody = fn.body
+        let resolveBody = fn.body
+        if (!BlockStatement.check(resolveBody)) {
+          resolveBody = j.blockStatement([j.returnStatement(resolveBody)])
+          fn.body = resolveBody
+        }
         if (BlockStatement.check(resolveBody)) {
           resolveBody.body.unshift(
             j.variableDeclaration("const", [
@@ -357,13 +361,6 @@ function renameFunctionParams(
                 j.objectExpression(newParamProperties)
               ),
             ])
-          )
-        } else {
-          console.log(
-            `Skipping args as resolve function returns object expression (${errorLocation(
-              file,
-              argsParam
-            )})`
           )
         }
       } else {

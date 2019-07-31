@@ -57,9 +57,8 @@ export const TypeWithoutThunk = new GraphQLObjectType<any, any>({
           type: GraphQLString,
         },
       }),
-      resolve: (_source, options, { artworkLoader }) => {
-        return artworkLoader(options.artwork_id, { other: options.other })
-      },
+      resolve: (_source, options, { artworkLoader }) =>
+        artworkLoader(options.artwork_id, { other: options.other }),
     },
   },
 })
@@ -122,9 +121,8 @@ export const MutationWithSingleArg: MutationConfig = {
       type: GraphQLString,
     },
   },
-  mutateAndGetPayload: (submission, { submissionUpdateLoader }) => {
-    return submissionUpdateLoader(submission.id, submission)
-  },
+  mutateAndGetPayload: (submission, { submissionUpdateLoader }) =>
+    submissionUpdateLoader(submission.id, submission),
 }
 
 const CustomInputType = new GraphQLInputObjectType({
