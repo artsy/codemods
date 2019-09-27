@@ -43,15 +43,33 @@ index 3c96e2b..9329390 100644
                path: file,
                source: source,
 diff --git a/node_modules/jscodeshift/src/testUtils.js b/node_modules/jscodeshift/src/testUtils.js
-index 7ccbf4f..24d79d4 100644
+index 7ccbf4f..6fe4586 100644
 --- a/node_modules/jscodeshift/src/testUtils.js
 +++ b/node_modules/jscodeshift/src/testUtils.js
-@@ -56,16 +56,16 @@ exports.runInlineTest = runInlineTest;
+@@ -14,7 +14,7 @@
+ const fs = require('fs');
+ const path = require('path');
+ 
+-function runInlineTest(module, options, input, expectedOutput) {
++async function runInlineTest(module, options, input, expectedOutput) {
+   // Handle ES6 modules using default export for the transform
+   const transform = module.default ? module.default : module;
+ 
+@@ -25,7 +25,7 @@ function runInlineTest(module, options, input, expectedOutput) {
+     jscodeshift = jscodeshift.withParser(module.parser);
+   }
+ 
+-  const output = transform(
++  const output = await transform(
+     input,
+     {
+       jscodeshift,
+@@ -56,21 +56,21 @@ exports.runInlineTest = runInlineTest;
   * - Test data should be located in a directory called __testfixtures__
   *   alongside the transform and __tests__ directory.
   */
 -function runTest(dirName, transformName, options, testFilePrefix) {
-+function runTest(dirName, transformName, options, testFilePrefix, testFileExtname) {
++async function runTest(dirName, transformName, options, testFilePrefix, testFileExtname) {
    if (!testFilePrefix) {
      testFilePrefix = transformName;
    }
@@ -66,7 +84,13 @@ index 7ccbf4f..24d79d4 100644
      'utf8'
    );
    // Assumes transform is one level up from __tests__ directory
-@@ -81,13 +81,13 @@ exports.runTest = runTest;
+   const module = require(path.join(dirName, '..', transformName));
+-  runInlineTest(module, options, {
++  await runInlineTest(module, options, {
+     path: inputPath,
+     source
+   }, expectedOutput);
+@@ -81,21 +81,21 @@ exports.runTest = runTest;
   * Handles some boilerplate around defining a simple jest/Jasmine test for a
   * jscodeshift transform.
   */
@@ -76,9 +100,20 @@ index 7ccbf4f..24d79d4 100644
      ? `transforms correctly using "${testFilePrefix}" data`
      : 'transforms correctly';
    describe(transformName, () => {
-     it(testName, () => {
+-    it(testName, () => {
 -      runTest(dirName, transformName, options, testFilePrefix);
-+      runTest(dirName, transformName, options, testFilePrefix, testFileExtname);
++    it(testName, async () => {
++      await runTest(dirName, transformName, options, testFilePrefix, testFileExtname);
      });
    });
  }
+ exports.defineTest = defineTest;
+ 
+ function defineInlineTest(module, options, input, expectedOutput, testName) {
+-  it(testName || 'transforms correctly', () => {
+-    runInlineTest(module, options, {
++  it(testName || 'transforms correctly', async () => {
++    await runInlineTest(module, options, {
+       source: input
+     }, expectedOutput);
+   });

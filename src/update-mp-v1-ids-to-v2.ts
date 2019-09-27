@@ -11,6 +11,7 @@
 
 import { Transform, TaggedTemplateExpression, Identifier } from "jscodeshift"
 import {
+  buildSchema,
   parse as parseGraphQL,
   print as printGraphQL,
   TypeInfo,
@@ -29,13 +30,13 @@ const renameField = (field: FieldNode, newName: string) => ({
   },
 })
 
-const transform: Transform = async (file, api, _options) => {
+const transform: Transform = async (file, api, options) => {
   if (!file.source.includes("graphql`")) {
     return
   }
   const j = api.jscodeshift
   const collection = j(file.source)
-  const schema = await promisedSchema
+  const schema = buildSchema(options.schema || (await promisedSchema))
   const typeInfo = new TypeInfo(schema)
 
   collection
@@ -50,7 +51,7 @@ const transform: Transform = async (file, api, _options) => {
       const newGraphQLDoc = visit(
         graphqlDoc,
         visitWithTypeInfo(typeInfo, {
-          Field(node, key, parent, path, ancestors) {
+          Field(node) {
             if (node.name.value === "__id") {
               return renameField(node, "id")
             }
