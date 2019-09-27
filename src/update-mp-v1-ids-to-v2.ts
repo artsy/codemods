@@ -23,6 +23,7 @@ import {
 import prettier from "prettier"
 import { ASTNode } from "recast"
 import { schema as promisedSchema } from "./helpers/getSchema"
+import { fragmentOnNonCompositeErrorMessage } from "graphql/validation/rules/FragmentsOnCompositeTypes"
 
 /**
  * Follows the selection chain in a GQL operation and returns the _parent_ type
@@ -87,10 +88,8 @@ const transform: Transform = async (file, api, _options) => {
 
             // Oh boy, it's an `id`, here we go...
 
-            let fragment = ancestors.find(
-              o => o && o.kind === "FragmentDefinition"
-            )
-            if (fragment) {
+            let fragment = ancestors[0]
+            if (fragment && fragment.kind === "FragmentDefinition") {
               fragment = fragment as FragmentDefinitionNode
               const fragmentTypeName = fragment.typeCondition.name.value
               const fragmentType = schema.getType(fragmentTypeName)
@@ -119,62 +118,37 @@ const transform: Transform = async (file, api, _options) => {
                   ) {
                     node.value = "slug"
                     return node
-                  } else if (
-                    !v2SchemaFields.includes("slug") &&
-                    v2SchemaFields.includes("internalID")
-                  ) {
+                  } else {
                     node.value = "internalID"
                     return node
                   }
                 } catch {
                   // TODO: The type wasn't found, we should inject a todo into the fragment or something
-                  return undefined
+                  node.value = "slugORinternalID"
+                  return node
                 }
               }
               // TODO: Maybe inject a todo that this thing isn't a fragment and idk what to do w/ it
+              node.value = "slugORinternalID"
+              return node
             }
+            node.value = "slugORinternalID"
+            return node
           }
           return undefined
         },
-        leave(node, key, parent, path, ancestors) {
-          return undefined
-        },
-        // Field: (fieldNode, ...others) => {
-        //   const oldName = fieldNode.name.value
-        //   if (oldName === "id" || oldName === "_id" || oldName === "id") {
-        //     console.log({ fieldNode })
-        //     console.log(JSON.stringify(others, null, 2))
-        //   }
-        // const newName = camelize(oldName)
-        // if (newName !== oldName) {
-        //   const name: NameNode = {
-        //     kind: "Name",
-        //     value: newName,
-        //   }
-        //   const alias: NameNode = fieldNode.alias || {
-        //     kind: "Name",
-        //     value: oldName,
-        //   }
-        //   return {
-        //     ...fieldNode,
-        //     alias,
-        //     name,
-        //   }
-        // }
-        //   return undefined
-        // },
         Argument: argNode => {
           const oldName = argNode.name.value
-          // if (oldName === "__id") {
-          //   const name: NameNode = {
-          //     kind: "Name",
-          //     value: "id",
-          //   }
-          //   return {
-          //     ...argNode,
-          //     name,
-          //   }
-          // }
+          if (oldName === "__id") {
+            const name: NameNode = {
+              kind: "Name",
+              value: "id",
+            }
+            return {
+              ...argNode,
+              name,
+            }
+          }
           return undefined
         },
       })
