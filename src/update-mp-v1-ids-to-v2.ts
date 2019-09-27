@@ -1,59 +1,13 @@
 /**
- * Updates `graphql` tags used throughout Relay code to assign result to an object
- * key vs implicitly assigning. Implicit assignment has  ow been deprecated.
- *
- * See: https://mobile.twitter.com/kassens/status/1116018336192548865
- *
- * To be used with jscodeshift: https://github.com/facebook/jscodeshift
- */
-
-// const transform: Transform = (file, api) => {
-//   const j = api.jscodeshift
-
-//   const source = j(file.source)
-//     .find(j.TaggedTemplateExpression, {
-//       tag: { type: "Identifier", name: "graphql" },
-//     })
-//     .filter(path => getAssignedObjectPropertyName(path) == null)
-//     .filter(path => path.parentPath.node.type !== "ExpressionStatement")
-//     .forEach(path => {
-//       const text = path.node.quasi.quasis[0].value.raw
-//       const fragmentNameMatch = text.replace(/#.*/g, "").match(/fragment (\w+)/)
-//       if (!fragmentNameMatch) {
-//         return
-//       }
-//       const fragmentName = fragmentNameMatch[1]
-
-//       const [, propName] = getFragmentNameParts(fragmentName)
-
-//       j(path).replaceWith(
-//         j.objectExpression([
-//           j.objectProperty(j.identifier(propName), path.node),
-//         ])
-//       )
-//     })
-//     .toSource()
-
-//   return source
-// }
-
-/**
  * 1. Run this codemod:
  *
+ * In reaction...
+ *
  *    ```bash
- *    $ jscodeshift --extensions=ts,tsx \
- *      --transform=../codemods/src/update-mp-v1-ids-to-v2.ts \
- *      src
+ *    $ yarn codemod update-mp-v1-ids-to-v2
  *    ```
  *
- * 2. Run prettier: `yarn prettier-project`
- *
- * 3. Run relay-compiler: `yarn relay`
- *
- * 4. Run type-checker: `yarn type-check -w`
- *
- * 5. Find TODOs added by codemod around mutation inputs and ensure the inputs
- *    have their keys camelCased.
+ * 5. Find TODOs added by codemod and update where necessary
  */
 
 import { Transform, TaggedTemplateExpression, Identifier } from "jscodeshift"
@@ -69,7 +23,6 @@ import {
 import prettier from "prettier"
 import { ASTNode } from "recast"
 import { schema as promisedSchema } from "./helpers/getSchema"
-// import { camelize } from "./helpers/camelize"
 
 /**
  * Follows the selection chain in a GQL operation and returns the _parent_ type
