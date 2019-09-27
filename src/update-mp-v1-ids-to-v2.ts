@@ -4,49 +4,30 @@
  * In reaction...
  *
  *    ```bash
- *    $ yarn codemod update-mp-v1-ids-to-v2
+ *    $ SCHEMA_PATH="$PWD/../metaphysics/_schemaV2.graphql" yarn codemod update-mp-v1-ids-to-v2
  *    ```
  *
- * 5. Find TODOs added by codemod and update where necessary
  */
 
 import { Transform, TaggedTemplateExpression, Identifier } from "jscodeshift"
 import {
   parse as parseGraphQL,
   print as printGraphQL,
+  TypeInfo,
   visit,
+  visitWithTypeInfo,
   NameNode,
-  FragmentDefinitionNode,
-  DefinitionNode,
-  ObjectTypeDefinitionNode,
+  FieldNode,
 } from "graphql"
-import prettier from "prettier"
-import { ASTNode } from "recast"
 import { schema as promisedSchema } from "./helpers/getSchema"
-import { fragmentOnNonCompositeErrorMessage } from "graphql/validation/rules/FragmentsOnCompositeTypes"
 
-/**
- * Follows the selection chain in a GQL operation and returns the _parent_ type
- * from the related schema
- */
-const walkSelections = (
-  selections: Array<string | number> | null,
-  operationChain: DefinitionNode,
-  schemaPosition: any
-): DefinitionNode => {
-  if (selections !== null && selections.length > 2) {
-    let selection = selections.shift()!
-    let definition = operationChain[selection] as DefinitionNode
-    let newSchemaPosition = schemaPosition
-    if (typeof selection === "number") {
-      newSchemaPosition = schemaPosition.fields.find(
-        field => definition.name.value === field.name.value
-      )
-    }
-    return walkSelections(selections, definition, newSchemaPosition)
-  }
-  return schemaPosition
-}
+const renameField = (field: FieldNode, newName: string) => ({
+  ...field,
+  name: {
+    ...field.name,
+    value: newName,
+  },
+})
 
 const transform: Transform = async (file, api, _options) => {
   if (!file.source.includes("graphql`")) {
@@ -55,6 +36,7 @@ const transform: Transform = async (file, api, _options) => {
   const j = api.jscodeshift
   const collection = j(file.source)
   const schema = await promisedSchema
+  const typeInfo = new TypeInfo(schema)
 
   collection
     .find(TaggedTemplateExpression, node => {
@@ -65,93 +47,50 @@ const transform: Transform = async (file, api, _options) => {
       const templateElement = path.node.quasi.quasis[0]
       const graphqlDoc = parseGraphQL(templateElement.value.raw)
 
-      const newGraphQLDoc = visit(graphqlDoc, {
-        enter(node, key, parent, path, ancestors) {
-          // let p = Array.isArray(parent) ? parent[0] : parent
-          if (
-            node.kind === "Name" &&
-            parent &&
-            parent.kind == "Field" &&
-            (node.value === "id" ||
-              node.value === "_id" ||
-              node.value === "__id")
-          ) {
-            if (node.value === "__id") {
-              node.value = "id"
-              return node
+      const newGraphQLDoc = visit(
+        graphqlDoc,
+        visitWithTypeInfo(typeInfo, {
+          Field(node, key, parent, path, ancestors) {
+            if (node.name.value === "__id") {
+              return renameField(node, "id")
             }
-
-            if (node.value === "_id") {
-              node.value = "internalID"
-              return node
+            if (node.name.value === "_id") {
+              return renameField(node, "internalID")
             }
-
-            // Oh boy, it's an `id`, here we go...
-
-            let fragment = ancestors[0]
-            if (fragment && fragment.kind === "FragmentDefinition") {
-              fragment = fragment as FragmentDefinitionNode
-              const fragmentTypeName = fragment.typeCondition.name.value
-              const fragmentType = schema.getType(fragmentTypeName)
-              if (fragmentType) {
-                let parentType: ObjectTypeDefinitionNode
-
-                try {
-                  // Find the parent type of this field selection from the schema...
-                  parentType = walkSelections(
-                    path.slice(2),
-                    fragment,
-                    schema.getType(fragmentTypeName)!.astNode
-                  )
-                  // Filter down the parent type to just it's fields
-                  const v2SchemaFields = parentType.fields
-                    .filter(
-                      field =>
-                        field.name.value === "internalID" ||
-                        field.name.value === "slug"
-                    )
-                    .map(field => field.name.value)
-
-                  if (
-                    v2SchemaFields.includes("slug") &&
-                    v2SchemaFields.includes("internalID")
-                  ) {
-                    node.value = "slug"
-                    return node
-                  } else {
-                    node.value = "internalID"
-                    return node
-                  }
-                } catch {
-                  // TODO: The type wasn't found, we should inject a todo into the fragment or something
-                  node.value = "slugORinternalID"
-                  return node
-                }
+            if (node.name.value === "id") {
+              const parentType = typeInfo.getParentType()
+              const parentFields =
+                (parentType &&
+                  parentType.astNode.fields.map(field => field.name.value)) ||
+                []
+              if (
+                parentFields.includes("slug") &&
+                parentFields.includes("internalID")
+              ) {
+                return renameField(node, "slug")
+              } else if (parentFields.includes("internalID")) {
+                return renameField(node, "internalID")
               }
-              // TODO: Maybe inject a todo that this thing isn't a fragment and idk what to do w/ it
-              node.value = "slugORinternalID"
-              return node
+              return renameField(node, "sludORinternalID")
             }
-            node.value = "slugORinternalID"
-            return node
-          }
-          return undefined
-        },
-        Argument: argNode => {
-          const oldName = argNode.name.value
-          if (oldName === "__id") {
-            const name: NameNode = {
-              kind: "Name",
-              value: "id",
+            return undefined
+          },
+          Argument: argNode => {
+            const oldName = argNode.name.value
+            if (oldName === "__id") {
+              const name: NameNode = {
+                kind: "Name",
+                value: "id",
+              }
+              return {
+                ...argNode,
+                name,
+              }
             }
-            return {
-              ...argNode,
-              name,
-            }
-          }
-          return undefined
-        },
-      })
+            return undefined
+          },
+        })
+      )
 
       // @ts-ignore
       const newGraphQLDocSource = printGraphQL(newGraphQLDoc, {

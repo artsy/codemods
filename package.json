@@ -5,8 +5,7 @@
   "license": "MIT",
   "scripts": {
     "prepare": "patch-package",
-    "test": "jest",
-    "sync-schema": "curl https://raw.githubusercontent.com/artsy/metaphysics/master/_schemaV2.graphql -o data/schema.graphql; yarn prettier --write --parser graphql data/schema.graphql"
+    "test": "jest"
   },
   "dependencies": {
     "@babel/runtime": "^7.5.5",
@@ -33,7 +32,6 @@
     "@types/jest": "^24.0.15",
     "@types/prettier": "^1.18.2",
     "babel-jest": "^24.8.0",
-    "graphql-fetch": "^1.0.1",
     "jest": "^24.8.0"
   }
 }
