@@ -1,5 +1,5 @@
 {
-  "extends": [
-    "config:base"
-  ]
+  "extends": ["@artsy:lib"],
+  "assignees": ["alloy"],
+  "reviewers": ["zephraph"]
 }
