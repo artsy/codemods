@@ -970,7 +970,7 @@
   dependencies:
     "@types/jest-diff" "*"
 
-"@types/jscodeshift@^0.6.3":
+"@types/jscodeshift@0.6.3":
   version "0.6.3"
   resolved "https://registry.yarnpkg.com/@types/jscodeshift/-/jscodeshift-0.6.3.tgz#96b3acc2b5b761faa77056f777c295b3d16ee2f2"
   integrity sha512-lJ0830s7cN9d9ebtEnfBfqhk4753bE44j5i3CdXoRpfqsuvi73eSKZMB6PxFmksw6gBDChCkfxF0jeEje6iGRw==
@@ -978,7 +978,7 @@
     ast-types "0.12.1"
     recast "0.17.2"
 
-"@types/node@^12.6.8":
+"@types/node@12.6.8":
   version "12.6.8"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-12.6.8.tgz#e469b4bf9d1c9832aee4907ba8a051494357c12c"
   integrity sha512-aX+gFgA5GHcDi89KG5keey2zf0WfZk/HAQotEamsK2kbey+8yGKcson0hbK8E+v0NArlCJQCqMP161YhV6ZXLg==
