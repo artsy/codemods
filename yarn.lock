@@ -970,10 +970,10 @@
   dependencies:
     "@types/jest-diff" "*"
 
-"@types/jscodeshift@^0.6.1":
-  version "0.6.1"
-  resolved "https://registry.yarnpkg.com/@types/jscodeshift/-/jscodeshift-0.6.1.tgz#8c659b646638770dcc3dd3c9cc324f7e09048720"
-  integrity sha512-xJRMvrkimKF2+/BZqu3Qnio3NQejRo2kgrCR1GE0T+S39ZdfpBus4IYInwEkFc1Wo9mMrhr0J7a5WbnSS4AaJA==
+"@types/jscodeshift@^0.6.3":
+  version "0.6.3"
+  resolved "https://registry.yarnpkg.com/@types/jscodeshift/-/jscodeshift-0.6.3.tgz#96b3acc2b5b761faa77056f777c295b3d16ee2f2"
+  integrity sha512-lJ0830s7cN9d9ebtEnfBfqhk4753bE44j5i3CdXoRpfqsuvi73eSKZMB6PxFmksw6gBDChCkfxF0jeEje6iGRw==
   dependencies:
     ast-types "0.12.1"
     recast "0.17.2"
