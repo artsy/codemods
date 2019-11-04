@@ -2,9 +2,7 @@
  * 1. Run this codemod:
  *
  *    ```bash
- *    $ jscodeshift --extensions=ts,tsx \
- *      --transform=../codemods/src/update-graphql-case-in-clients.ts \
- *      src
+ *    $ jscodeshift --extensions=ts,tsx --transform=../codemods/src/update-graphql-case-in-clients.ts src
  *    ```
  *
  * 2. Run prettier: `yarn prettier-project`

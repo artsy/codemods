@@ -9,8 +9,6 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.5.5",
-    "@types/jscodeshift": "^0.6.1",
-    "@types/node": "^12.6.8",
     "graphql": "^14.4.2",
     "jscodeshift": "^0.6.4",
     "patch-package": "^6.2.0",
@@ -31,6 +29,8 @@
     "@types/graphql": "14.2.3",
     "@types/graphql-relay": "0.4.9",
     "@types/jest": "24.0.15",
+    "@types/jscodeshift": "^0.6.3",
+    "@types/node": "^12.6.8",
     "@types/prettier": "1.18.2",
     "babel-jest": "24.8.0",
     "jest": "24.8.0"

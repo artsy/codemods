@@ -1,12 +1,15 @@
 /**
  * 1. Run this codemod:
  *
- * In reaction...
- *
- *    ```bash
- *    $ SCHEMA_PATH="$PWD/../metaphysics/_schemaV2.graphql" yarn codemod update-mp-v1-ids-to-v2
+ *    ```
+ *    $ jscodeshift --extensions=ts,tsx --transform=../codemods/src/update-mp-v1-ids-to-v2.ts src
  *    ```
  *
+ * 2. Run prettier:
+ *
+ *    ```
+ *    $ yarn prettier-project --write src
+ *    ```
  */
 
 import { Transform, TaggedTemplateExpression, Identifier } from "jscodeshift"
@@ -19,8 +22,10 @@ import {
   visitWithTypeInfo,
   NameNode,
   FieldNode,
+  isInterfaceType,
+  isObjectType,
 } from "graphql"
-import { schema as promisedSchema } from "./helpers/getSchema"
+import { readFileSync } from "fs"
 
 const renameField = (field: FieldNode, newName: string) => ({
   ...field,
@@ -30,13 +35,16 @@ const renameField = (field: FieldNode, newName: string) => ({
   },
 })
 
-const transform: Transform = async (file, api, options) => {
+const transform: Transform = (file, api, options) => {
   if (!file.source.includes("graphql`")) {
     return
   }
   const j = api.jscodeshift
   const collection = j(file.source)
-  const schema = buildSchema(options.schema || (await promisedSchema))
+  const schema = buildSchema(
+    options.schema ||
+      readFileSync(options.schemaPath || "./data/schema.graphql", "utf8")
+  )
   const typeInfo = new TypeInfo(schema)
 
   collection
@@ -62,6 +70,9 @@ const transform: Transform = async (file, api, options) => {
               const parentType = typeInfo.getParentType()
               const parentFields =
                 (parentType &&
+                  (isInterfaceType(parentType) || isObjectType(parentType)) &&
+                  parentType.astNode &&
+                  parentType.astNode.fields &&
                   parentType.astNode.fields.map(field => field.name.value)) ||
                 []
               if (

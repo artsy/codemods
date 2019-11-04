@@ -20,7 +20,6 @@ import { ExpressionKind } from "ast-types/gen/kinds"
 
 import { errorLocation } from "./errorLocation"
 import { getProperty } from "./getProperty"
-import { schema } from "./getSchema"
 
 export function forEachArgumentMap(
   collection: Collection<any>,
