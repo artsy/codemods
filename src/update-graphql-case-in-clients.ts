@@ -77,6 +77,21 @@ const transform: Transform = (file, api, _options) => {
           }
           return undefined
         },
+        Variable: varNode => {
+          const oldName = varNode.name.value
+          const newName = camelize(oldName)
+          if (newName !== oldName) {
+            const name: NameNode = {
+              kind: "Name",
+              value: newName,
+            }
+            return {
+              ...varNode,
+              name,
+            }
+          }
+          return undefined
+        },
       })
 
       const newGraphQLDocSource = printGraphQL(newGraphQLDoc)
