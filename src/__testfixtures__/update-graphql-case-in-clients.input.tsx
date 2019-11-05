@@ -21,8 +21,8 @@ const BidFlowMaxBidStoryRenderer = () => (
   <QueryRenderer
     environment={null}
     query={graphql`
-      query BidFlowSelectMaxBidRendererQuery($saleArtworkID: String!) {
-        sale_artwork(sale_artwork_id: $saleArtworkID) {
+      query BidFlowSelectMaxBidRendererQuery($sale_artwork_id: String!) {
+        sale_artwork(sale_artwork_id: $sale_artwork_id) {
           ...SelectMaxBid_sale_artwork
         }
       }
